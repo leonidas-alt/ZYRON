@@ -161,27 +161,3 @@ python -m venv .venv
 pip install -r requirements.txt
 python main.py
 ```
-
-## Roadmap MVP -> 1.0
-
-1. MVP arquitetural com módulos separados, Ollama, Faster-Whisper, Edge-TTS, OpenWeather e SQLite.
-2. Integração real de microfone e reprodução de áudio no Windows.
-3. Registro de aplicativos favoritos e aliases por usuário.
-4. Memória persistente com sumarização de interações.
-5. Banco vetorial local para lembranças semânticas.
-6. Spotify API para música e playlists.
-7. Google Calendar API para agenda.
-8. Gmail API para leitura e rascunho de e-mails.
-9. Sistema financeiro pessoal com categorias, relatórios e alertas.
-10. Interface de bandeja do Windows e serviço de inicialização automática.
-
-## TODO
-
-- [ ] Conectar backend real de captura de microfone.
-- [ ] Reproduzir o MP3 gerado pelo Edge-TTS.
-- [ ] Adicionar aliases configuráveis para aplicativos.
-- [ ] Implementar autenticação OAuth para Google e Spotify.
-- [ ] Criar camada de memória persistente sobre SQLite.
-- [ ] Avaliar ChromaDB, LanceDB ou SQLite-VSS para banco vetorial.
-- [ ] Adicionar testes para roteador, serviços e repositório.
-- [ ] Criar instalador Windows.
