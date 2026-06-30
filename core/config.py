@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Carrega Settings por variáveis de ambiente e .env.
-
-Próxima Versão:
-
-* Validar configurações obrigatórias e separar secrets de preferências.
-
-Versão Futura:
-
-* Gerenciar perfis, cofres de segredo e configuração remota segura.
-
-Dependências Futuras:
-
-* Vault local, AWS Secrets Manager, Docker secrets
-"""
-
-# TODO:
-# Validar configurações obrigatórias por funcionalidade e emitir mensagens claras quando variáveis estiverem ausentes.
-# FIXME:
-# Configurações sensíveis e preferências não sensíveis ainda estão misturadas no mesmo objeto.
-# IMPROVEMENT:
-# Separar Settings em grupos como AISettings, VoiceSettings, WeatherSettings, DatabaseSettings e SecuritySettings.
-# FUTURE:
-# Suportar perfis multiusuário, configuração via painel web, Docker secrets, AWS Secrets Manager e cofre local.
-# OPTIMIZATION:
-# Evitar leituras repetidas de ambiente mantendo configurações imutáveis e cacheadas no início do processo.
-# SECURITY:
-# Nunca persistir chaves em logs; validar permissões de arquivos .env e tokens OAuth futuros.
-
-
 """Configuration loading for ZYRON."""
 
 from dataclasses import dataclass
