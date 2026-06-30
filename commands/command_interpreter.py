@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Converte texto em intents usando regras simples.
-
-Próxima Versão:
-
-* Adicionar aliases, normalização e classificação por IA em JSON.
-
-Versão Futura:
-
-* Planner multi-etapas, plugins de comandos e aprendizado com correções.
-
-Dependências Futuras:
-
-* Ollama, SQLite aliases, sistema de plugins
-"""
-
-# TODO:
-# Cobrir todos os tipos de comando com testes parametrizados e exemplos reais em português.
-# FIXME:
-# A interpretação atual depende de prefixos rígidos e falha com linguagem natural variada.
-# IMPROVEMENT:
-# Adicionar aliases persistidos em SQLite e classificação por Ollama com saída JSON validada.
-# FUTURE:
-# Suportar planner multi-etapas, sistema de plugins, comandos de Spotify, Calendar, Gmail, IoT e financeiro.
-# OPTIMIZATION:
-# Pré-compilar padrões e normalizar texto uma única vez por comando.
-# SECURITY:
-# Marcar intents potencialmente perigosas para confirmação antes de executar automações ou operações financeiras.
-
-
 """Rule-based command interpreter for the MVP."""
 
 from core.models import CommandIntent, CommandType
