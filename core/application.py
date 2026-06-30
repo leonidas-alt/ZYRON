@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Orquestra dependências, saudação inicial, loop de escuta e roteamento.
-
-Próxima Versão:
-
-* Adicionar tratamento resiliente de erros, logging estruturado e lifecycle hooks.
-
-Versão Futura:
-
-* Sistema de plugins, multiusuário, filas de eventos e painel administrativo.
-
-Dependências Futuras:
-
-* Plugin manager, Dashboard Web, PostgreSQL, AWS
-"""
-
-# TODO:
-# Criar testes de ciclo de vida cobrindo bootstrap, roteamento, persistência e fala com dependências mockadas.
-# FIXME:
-# O loop principal ainda pode parar se STT, TTS, banco, clima ou Ollama lançarem exceções.
-# IMPROVEMENT:
-# Introduzir interfaces para STT, TTS, IA, repositório e roteador, reduzindo acoplamento da aplicação concreta.
-# FUTURE:
-# Adicionar sistema de plugins, múltiplos usuários, dashboard web, painel administrativo e filas assíncronas de comandos.
-# OPTIMIZATION:
-# Usar execução assíncrona ou filas para não bloquear escuta enquanto comandos longos são processados.
-# SECURITY:
-# Inserir uma camada de autorização antes de executar automações, e-mails, agenda, finanças ou comandos shell.
-
-
 """Main application orchestration for the ZYRON assistant."""
 
 from ai.ollama_client import OllamaClient
