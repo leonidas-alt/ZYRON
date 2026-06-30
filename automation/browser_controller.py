@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Abre sites e pesquisas no navegador padrão.
-
-Próxima Versão:
-
-* Validar URLs, favoritos e provedores de busca configuráveis.
-
-Versão Futura:
-
-* Automação web avançada, dashboard e navegação assistida por IA.
-
-Dependências Futuras:
-
-* Playwright, Dashboard Web, policy engine
-"""
-
-# TODO:
-# Criar testes para normalização de URL, pesquisa Google e provedores de busca configuráveis.
-# FIXME:
-# URLs ainda não são validadas contra esquemas perigosos ou domínios bloqueados.
-# IMPROVEMENT:
-# Adicionar favoritos, aliases de sites e seleção de navegador por perfil.
-# FUTURE:
-# Integrar Playwright para automação web avançada e dashboard local de navegação assistida.
-# OPTIMIZATION:
-# Reutilizar abas/janelas quando possível e evitar abrir buscas duplicadas.
-# SECURITY:
-# Validar esquemas permitidos e adicionar confirmação para sites sensíveis ou downloads.
-
-
 """Browser automation helpers for sites and Google searches."""
 
 from urllib.parse import quote_plus
