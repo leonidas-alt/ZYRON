@@ -119,9 +119,7 @@ flowchart TD
     K --> L[Fala resposta]
     L --> E
 ```
-
 ## Dependências entre módulos
-
 ```mermaid
 graph LR
     main --> core
