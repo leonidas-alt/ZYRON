@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Roteia intents para automação, serviços ou IA.
-
-Próxima Versão:
-
-* Separar handlers por domínio e adicionar autorização por nível de risco.
-
-Versão Futura:
-
-* Barramento de comandos, workflows compostos e execução assíncrona.
-
-Dependências Futuras:
-
-* Plugin manager, filas, painel administrativo
-"""
-
-# TODO:
-# Adicionar testes com mocks para cada CommandType e para falhas dos serviços chamados.
-# FIXME:
-# O roteador concentra muitos handlers e tende a crescer demais com novas integrações.
-# IMPROVEMENT:
-# Refatorar para handlers registrados por domínio, com política de permissões e auditoria.
-# FUTURE:
-# Integrar Spotify API, Google Calendar API, Gmail API, plugins, workflows compostos e painel administrativo.
-# OPTIMIZATION:
-# Executar handlers lentos de forma assíncrona e armazenar resultados parciais para feedback rápido.
-# SECURITY:
-# Exigir confirmação para envio de e-mail, alteração de agenda, shell, IoT, finanças e ações irreversíveis.
-
-
 """Command routing and execution layer."""
 
 from ai.ollama_client import OllamaClient
