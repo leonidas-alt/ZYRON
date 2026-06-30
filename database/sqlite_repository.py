@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Cria schema SQLite básico e salva interações.
-
-Próxima Versão:
-
-* Adicionar migrações, repositórios especializados e transações explícitas.
-
-Versão Futura:
-
-* PostgreSQL, banco vetorial e criptografia de dados sensíveis.
-
-Dependências Futuras:
-
-* SQLite, PostgreSQL, ChromaDB, pgvector
-"""
-
-# TODO:
-# Criar testes de inicialização, persistência, consultas e falhas de permissão no arquivo de banco.
-# FIXME:
-# O schema é criado inline e ainda não possui migrações versionadas.
-# IMPROVEMENT:
-# Separar repositórios de interações, memórias, aliases, tokens OAuth, preferências e finanças.
-# FUTURE:
-# Suportar PostgreSQL, ChromaDB, pgvector, criptografia de campos sensíveis e backup local.
-# OPTIMIZATION:
-# Reutilizar conexões com cuidado ou usar pool quando migrar para PostgreSQL.
-# SECURITY:
-# Criptografar tokens, e-mails, dados financeiros e memórias sensíveis antes de persistir.
-
-
 """SQLite persistence layer for ZYRON interactions."""
 
 from pathlib import Path
