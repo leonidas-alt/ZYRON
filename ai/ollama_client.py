@@ -1,37 +1,3 @@
-"""
-ROADMAP DO MÓDULO
-
-Versão Atual:
-
-* Comunica com Ollama local para geração de texto.
-
-Próxima Versão:
-
-* Adicionar prompt de sistema, retries, health checks e classificação de intents.
-
-Versão Futura:
-
-* Roteamento multimodelo, embeddings, memória vetorial e ferramentas.
-
-Dependências Futuras:
-
-* Ollama embeddings, ChromaDB, PostgreSQL/pgvector
-"""
-
-# TODO:
-# Criar testes com servidor HTTP fake para respostas válidas, timeout, erro 500 e JSON inesperado.
-# FIXME:
-# O cliente ainda não possui retries, health check nem fallback quando o Ollama está offline.
-# IMPROVEMENT:
-# Adicionar prompts de sistema, classificação de intents em JSON e injeção de sessão HTTP testável.
-# FUTURE:
-# Integrar embeddings, ChromaDB, PostgreSQL/pgvector, memória vetorial e roteamento entre múltiplos modelos locais.
-# OPTIMIZATION:
-# Reutilizar conexões HTTP com requests.Session e cachear respostas determinísticas quando aplicável.
-# SECURITY:
-# Sanitizar contexto enviado ao modelo para evitar exposição de tokens, e-mails, finanças ou dados sensíveis.
-
-
 """Client for communicating with a local Ollama server."""
 
 import requests
