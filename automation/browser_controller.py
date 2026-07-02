@@ -1,11 +1,7 @@
-"""Browser automation helpers for sites and Google searches."""
-
 from urllib.parse import quote_plus
 import webbrowser
 
-
 class BrowserController:
-    """Opens URLs and search pages in the default browser."""
 
     def open_site(self, site: str) -> None:
         """Open a site, adding https:// when no scheme is provided."""
