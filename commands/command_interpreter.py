@@ -1,13 +1,8 @@
-"""Rule-based command interpreter for the MVP."""
-
 from core.models import CommandIntent, CommandType
 
-
 class CommandInterpreter:
-    """Transforms transcribed text into structured command intents."""
 
     def interpret(self, text: str) -> CommandIntent:
-        """Classify the command using simple Portuguese keyword rules."""
         normalized = text.lower().strip()
         if normalized.startswith("abrir aplicativo "):
             return CommandIntent(CommandType.OPEN_APP, text, normalized.replace("abrir aplicativo ", "", 1))
