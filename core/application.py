@@ -1,5 +1,3 @@
-"""Main application orchestration for the ZYRON assistant."""
-
 from ai.ollama_client import OllamaClient
 from automation.app_launcher import AppLauncher
 from automation.browser_controller import BrowserController
@@ -15,10 +13,8 @@ from voice.wake_word import WakeWordDetector
 
 
 class ZyronApplication:
-    """Coordinates startup, listening, command routing and speaking responses."""
 
     def __init__(self, settings: Settings) -> None:
-        """Initialize all application services using dependency injection."""
         self.settings = settings
         self.repository = SQLiteRepository(settings.database_path)
         self.time_service = TimeService()
@@ -37,7 +33,6 @@ class ZyronApplication:
         )
 
     def bootstrap(self) -> None:
-        """Prepare local resources and greet the owner on application startup."""
         self.repository.initialize()
         current_time = self.time_service.current_time_text()
         temperature = self.weather_service.current_temperature_text()
@@ -49,7 +44,6 @@ class ZyronApplication:
         self.text_to_speech.speak(greeting)
 
     def run(self) -> None:
-        """Run the background assistant loop until the process is stopped."""
         self.bootstrap()
         while True:
             audio = self.speech_to_text.listen_once()
