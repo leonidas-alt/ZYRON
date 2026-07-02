@@ -1,10 +1,7 @@
-"""Client for communicating with a local Ollama server."""
-
 import requests
 
 
 class OllamaClient:
-    """Small HTTP client that sends prompts to Ollama and returns model responses."""
 
     def __init__(self, base_url: str, model: str, timeout: int = 120) -> None:
         """Store Ollama connection details."""
