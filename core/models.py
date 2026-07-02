@@ -1,5 +1,3 @@
-"""Shared domain models used across ZYRON modules."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -7,7 +5,6 @@ from typing import Any
 
 
 class CommandType(str, Enum):
-    """Supported high-level command categories."""
 
     OPEN_APP = "open_app"
     OPEN_SITE = "open_site"
@@ -20,7 +17,6 @@ class CommandType(str, Enum):
 
 @dataclass(frozen=True)
 class CommandIntent:
-    """Interpreted command intent produced from user speech."""
 
     command_type: CommandType
     raw_text: str
@@ -30,7 +26,6 @@ class CommandIntent:
 
 @dataclass(frozen=True)
 class AssistantResponse:
-    """Textual response plus optional execution metadata."""
 
     text: str
     spoken: bool = True
