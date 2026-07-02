@@ -1,5 +1,3 @@
-"""Configuration loading for ZYRON."""
-
 from dataclasses import dataclass
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,7 +6,6 @@ import os
 
 @dataclass(frozen=True)
 class Settings:
-    """Immutable runtime settings loaded from environment variables."""
 
     assistant_name: str = "Zyron"
     owner_name: str = "Leonidas"
@@ -24,7 +21,6 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """Load settings from a .env file and process environment variables."""
         load_dotenv()
         return cls(
             assistant_name=os.getenv("ZYRON_ASSISTANT_NAME", cls.assistant_name),
