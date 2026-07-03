@@ -9,7 +9,6 @@ from core.ports import WeatherProvider
 
 
 class WeatherService(WeatherProvider):
-    """OpenWeather adapter with graceful degradation for external API failures."""
 
     def __init__(self, api_key: str, city: str, timeout: int = 15) -> None:
         self.api_key = api_key
