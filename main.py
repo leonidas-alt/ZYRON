@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import asyncio
+
 from core.application import ZyronApplication
 from core.config import Settings
 
@@ -5,7 +9,7 @@ from core.config import Settings
 def main() -> None:
     settings = Settings.from_env()
     app = ZyronApplication(settings=settings)
-    app.run()
+    asyncio.run(app.run())
 
 
 if __name__ == "__main__":
