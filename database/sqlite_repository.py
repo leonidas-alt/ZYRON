@@ -8,7 +8,6 @@ from core.ports import InteractionRepository
 
 
 class SQLiteRepository(InteractionRepository):
-    """SQLite persistence adapter using context managers for connection safety."""
 
     def __init__(self, database_path: Path) -> None:
         self.database_path = database_path
