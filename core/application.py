@@ -23,7 +23,6 @@ from voice.wake_word import WakeWordDetector
 
 
 class ZyronApplication:
-    """Application orchestrator that composes ports and drives the assistant loop."""
 
     def __init__(
         self,
