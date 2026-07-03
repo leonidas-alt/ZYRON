@@ -9,7 +9,6 @@ from core.ports import SpeechSynthesizer
 
 
 class TextToSpeech(SpeechSynthesizer):
-    """Edge-TTS speech synthesizer adapter."""
 
     def __init__(self, voice: str) -> None:
         self.voice = voice
