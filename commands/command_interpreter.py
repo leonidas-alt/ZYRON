@@ -37,7 +37,6 @@ class KeywordRule:
 
 
 class CommandInterpreter(CommandInterpreterPort):
-    """Strategy-based natural-language command interpreter for Portuguese commands."""
 
     def __init__(self, rules: tuple[PrefixRule | KeywordRule, ...] | None = None) -> None:
         self._rules = rules or (
