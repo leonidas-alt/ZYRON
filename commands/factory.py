@@ -21,7 +21,6 @@ from commands.handlers import (
 
 
 class CommandFactory:
-    """Factory that wires command handlers without exposing concrete routing details."""
 
     def __init__(
         self,
