@@ -1,20 +1,61 @@
-from core.models import CommandIntent, CommandType
+from __future__ import annotations
 
-class CommandInterpreter:
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from core.models import CommandIntent, CommandType
+from core.ports import CommandInterpreterPort
+
+IntentParser = Callable[[str, str], CommandIntent | None]
+
+
+@dataclass(frozen=True)
+class PrefixRule:
+    prefixes: tuple[str, ...]
+    command_type: CommandType
+
+    def parse(self, normalized: str, original: str) -> CommandIntent | None:
+        for prefix in self.prefixes:
+            if normalized.startswith(prefix):
+                return CommandIntent(
+                    command_type=self.command_type,
+                    raw_text=original,
+                    target=normalized.removeprefix(prefix).strip(),
+                )
+        return None
+
+
+@dataclass(frozen=True)
+class KeywordRule:
+    keywords: tuple[str, ...]
+    command_type: CommandType
+
+    def parse(self, normalized: str, original: str) -> CommandIntent | None:
+        if any(keyword in normalized for keyword in self.keywords):
+            return CommandIntent(self.command_type, original)
+        return None
+
+
+class CommandInterpreter(CommandInterpreterPort):
+    """Strategy-based natural-language command interpreter for Portuguese commands."""
+
+    def __init__(self, rules: tuple[PrefixRule | KeywordRule, ...] | None = None) -> None:
+        self._rules = rules or (
+            PrefixRule(("abrir aplicativo ",), CommandType.OPEN_APP),
+            PrefixRule(("abrir site ",), CommandType.OPEN_SITE),
+            PrefixRule(("pesquisar ", "pesquise "), CommandType.GOOGLE_SEARCH),
+            KeywordRule(("horas", "horário"), CommandType.CURRENT_TIME),
+            KeywordRule(("temperatura", "clima"), CommandType.CURRENT_WEATHER),
+        )
 
     def interpret(self, text: str) -> CommandIntent:
         normalized = text.lower().strip()
-        if normalized.startswith("abrir aplicativo "):
-            return CommandIntent(CommandType.OPEN_APP, text, normalized.replace("abrir aplicativo ", "", 1))
-        if normalized.startswith("abrir site "):
-            return CommandIntent(CommandType.OPEN_SITE, text, normalized.replace("abrir site ", "", 1))
-        if normalized.startswith("pesquisar ") or normalized.startswith("pesquise "):
-            query = normalized.replace("pesquisar ", "", 1).replace("pesquise ", "", 1)
-            return CommandIntent(CommandType.GOOGLE_SEARCH, text, query)
-        if "horas" in normalized or "horário" in normalized:
-            return CommandIntent(CommandType.CURRENT_TIME, text)
-        if "temperatura" in normalized or "clima" in normalized:
-            return CommandIntent(CommandType.CURRENT_WEATHER, text)
-        if normalized:
-            return CommandIntent(CommandType.AI_CHAT, text)
-        return CommandIntent(CommandType.UNKNOWN, text)
+        if not normalized:
+            return CommandIntent(CommandType.UNKNOWN, text)
+
+        for rule in self._rules:
+            intent = rule.parse(normalized, text)
+            if intent is not None:
+                return intent
+
+        return CommandIntent(CommandType.AI_CHAT, text)

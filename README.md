@@ -11,7 +11,8 @@ ZYRON/
 │   ├── __init__.py
 │   ├── application.py
 │   ├── config.py
-│   └── models.py
+│   ├── models.py
+│   └── ports.py
 ├── ai/
 │   ├── __init__.py
 │   └── ollama_client.py
@@ -23,7 +24,9 @@ ZYRON/
 ├── commands/
 │   ├── __init__.py
 │   ├── command_interpreter.py
-│   └── command_router.py
+│   ├── command_router.py
+│   ├── factory.py
+│   └── handlers.py
 ├── automation/
 │   ├── __init__.py
 │   ├── app_launcher.py
@@ -44,10 +47,10 @@ ZYRON/
 
 ## Responsabilidades das pastas
 
-- `core/`: configuração, modelos de domínio e orquestração principal.
+- `core/`: configuração, modelos de domínio, contratos/portas e orquestração principal.
 - `ai/`: clientes e componentes de IA local, incluindo Ollama e futura memória vetorial.
 - `voice/`: captura, transcrição, wake word e síntese de voz.
-- `commands/`: interpretação e roteamento de comandos.
+- `commands/`: interpretação, factory, handlers e roteamento de comandos com Strategy/Command Pattern.
 - `automation/`: automação de desktop e navegador.
 - `services/`: serviços de horário, clima e futuras APIs externas.
 - `database/`: persistência SQLite e base para memória persistente.
@@ -68,6 +71,9 @@ Objetivo: carregar configurações via `.env`. Dependências: `python-dotenv`.
 ### `core/models.py`
 Objetivo: centralizar modelos de domínio (`CommandIntent`, `AssistantResponse`). Dependências: biblioteca padrão.
 
+### `core/ports.py`
+Objetivo: definir contratos abstratos para adapters de IA, voz, automação, serviços e persistência. Dependências: biblioteca padrão.
+
 ### `ai/ollama_client.py`
 Objetivo: enviar prompts ao Ollama local. Dependências: `requests`.
 
@@ -84,7 +90,13 @@ Objetivo: detectar e remover a palavra de ativação `Zyron`. Dependências: bib
 Objetivo: converter texto em intenções estruturadas. Dependências: `core.models`.
 
 ### `commands/command_router.py`
-Objetivo: executar intenções usando o serviço correto. Dependências: IA, automação e serviços.
+Objetivo: rotear intenções para handlers de comandos via factory. Dependências: `commands.factory`, `core.models`.
+
+### `commands/factory.py`
+Objetivo: encapsular a criação e seleção de handlers de comando. Dependências: portas de `core`.
+
+### `commands/handlers.py`
+Objetivo: implementar ações executáveis do assistente com Command Pattern. Dependências: portas de `core`.
 
 ### `automation/app_launcher.py`
 Objetivo: abrir aplicativos instalados. Dependências: `subprocess`.
@@ -108,13 +120,13 @@ flowchart TD
     A[Inicialização] --> B[Carrega Settings]
     B --> C[Inicializa SQLite]
     C --> D[Saudação com voz]
-    D --> E[Escuta áudio]
+    D --> E[Escuta áudio assíncrono]
     E --> F[Transcreve com Faster-Whisper]
     F --> G{Wake word Zyron?}
     G -- Não --> E
     G -- Sim --> H[Interpreta comando]
     H --> I[Roteia intenção]
-    I --> J[Executa automação/serviço/IA]
+    I --> J[Executa handler assíncrono]
     J --> K[Salva interação]
     K --> L[Fala resposta]
     L --> E
@@ -131,10 +143,9 @@ graph LR
     core --> automation
     core --> services
     core --> database
+    adapters[ai/voice/services/automation/database] --> core_ports[core.ports]
     commands --> core_models[core.models]
-    commands --> ai
-    commands --> automation
-    commands --> services
+    commands --> core_ports[core.ports]
     voice --> faster_whisper
     voice --> edge_tts
     services --> requests

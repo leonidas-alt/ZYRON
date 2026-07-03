@@ -1,11 +1,19 @@
+from __future__ import annotations
+
+import asyncio
 from urllib.parse import quote_plus
 import webbrowser
 
-class BrowserController:
+from core.ports import BrowserGateway
 
-    def open_site(self, site: str) -> None:
+
+class BrowserController(BrowserGateway):
+    """Browser automation adapter isolated behind a gateway contract."""
+
+    async def open_site(self, site: str) -> None:
         url = site if site.startswith(("http://", "https://")) else f"https://{site}"
-        webbrowser.open(url)
+        await asyncio.to_thread(webbrowser.open, url)
 
-    def google_search(self, query: str) -> None:
-        webbrowser.open(f"https://www.google.com/search?q={quote_plus(query)}")
+    async def google_search(self, query: str) -> None:
+        url = f"https://www.google.com/search?q={quote_plus(query)}"
+        await asyncio.to_thread(webbrowser.open, url)

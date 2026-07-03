@@ -1,4 +1,10 @@
-class WakeWordDetector:
+from __future__ import annotations
+
+from core.ports import WakeWordService
+
+
+class WakeWordDetector(WakeWordService):
+    """Wake-word detector kept independent from the audio backend."""
 
     def __init__(self, wake_word: str) -> None:
         self.wake_word = wake_word.lower().strip()
