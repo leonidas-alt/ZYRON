@@ -9,7 +9,6 @@ from core.ports import AIClient
 
 
 class OllamaClient(AIClient):
-    """Async adapter for the local Ollama HTTP API."""
 
     def __init__(self, base_url: str, model: str, timeout: int = 120) -> None:
         self.base_url = base_url.rstrip("/")
