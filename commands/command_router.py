@@ -5,7 +5,6 @@ from core.models import AssistantResponse, CommandIntent
 
 
 class CommandRouter:
-    """Routes intents to command handlers using Strategy + Command patterns."""
 
     def __init__(self, command_factory: CommandFactory) -> None:
         self._command_factory = command_factory
