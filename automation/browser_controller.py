@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 import asyncio
 from urllib.parse import quote_plus
 import webbrowser
-
 from core.ports import BrowserGateway
-
 
 class BrowserController(BrowserGateway):
 
