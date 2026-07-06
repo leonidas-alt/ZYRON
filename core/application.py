@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from ai.ollama_client import OllamaClient
 from automation.app_launcher import AppLauncher
 from automation.browser_controller import BrowserController
@@ -20,7 +19,6 @@ from services.weather_service import WeatherService
 from voice.speech_to_text import SpeechToText
 from voice.text_to_speech import TextToSpeech
 from voice.wake_word import WakeWordDetector
-
 
 class ZyronApplication:
 
