@@ -1,12 +1,8 @@
 from __future__ import annotations
-
 import asyncio
 from typing import Any
-
 from faster_whisper import WhisperModel
-
 from core.ports import SpeechRecognizer
-
 
 class SpeechToText(SpeechRecognizer):
 
