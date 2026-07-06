@@ -3,7 +3,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-
 @dataclass(frozen=True)
 class Settings:
 
