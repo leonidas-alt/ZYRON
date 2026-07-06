@@ -1,7 +1,5 @@
 from __future__ import annotations
-
 from core.ports import WakeWordService
-
 
 class WakeWordDetector(WakeWordService):
 
