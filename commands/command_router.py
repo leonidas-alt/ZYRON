@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 from commands.factory import CommandFactory
 from core.models import AssistantResponse, CommandIntent
-
 
 class CommandRouter:
 
