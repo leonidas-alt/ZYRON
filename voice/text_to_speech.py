@@ -1,12 +1,8 @@
 from __future__ import annotations
-
 from pathlib import Path
 import tempfile
-
 import edge_tts
-
 from core.ports import SpeechSynthesizer
-
 
 class TextToSpeech(SpeechSynthesizer):
 
