@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 import asyncio
 from pathlib import Path
 import sqlite3
-
 from core.ports import InteractionRepository
-
 
 class SQLiteRepository(InteractionRepository):
 
