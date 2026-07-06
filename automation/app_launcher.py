@@ -1,10 +1,7 @@
 from __future__ import annotations
-
 import asyncio
 import subprocess
-
 from core.ports import ApplicationLauncher
-
 
 class AppLauncher(ApplicationLauncher):
 
