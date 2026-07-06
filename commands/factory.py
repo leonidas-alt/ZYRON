@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from core.models import CommandType
 from core.ports import (
     AIClient,
@@ -18,7 +17,6 @@ from commands.handlers import (
     OpenSiteCommand,
     UnknownCommand,
 )
-
 
 class CommandFactory:
 
