@@ -1,13 +1,10 @@
 from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
-
 from core.models import CommandIntent, CommandType
 from core.ports import CommandInterpreterPort
 
 IntentParser = Callable[[str, str], CommandIntent | None]
-
 
 @dataclass(frozen=True)
 class PrefixRule:
@@ -24,7 +21,6 @@ class PrefixRule:
                 )
         return None
 
-
 @dataclass(frozen=True)
 class KeywordRule:
     keywords: tuple[str, ...]
@@ -34,7 +30,6 @@ class KeywordRule:
         if any(keyword in normalized for keyword in self.keywords):
             return CommandIntent(self.command_type, original)
         return None
-
 
 class CommandInterpreter(CommandInterpreterPort):
 
