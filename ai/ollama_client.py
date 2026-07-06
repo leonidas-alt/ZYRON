@@ -1,12 +1,8 @@
 from __future__ import annotations
-
 import asyncio
 from typing import Any
-
 import requests
-
 from core.ports import AIClient
-
 
 class OllamaClient(AIClient):
 
