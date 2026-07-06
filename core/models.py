@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-
 class CommandType(str, Enum):
 
     OPEN_APP = "open_app"
@@ -14,7 +13,6 @@ class CommandType(str, Enum):
     AI_CHAT = "ai_chat"
     UNKNOWN = "unknown"
 
-
 @dataclass(frozen=True)
 class CommandIntent:
 
@@ -22,7 +20,6 @@ class CommandIntent:
     raw_text: str
     target: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-
 
 @dataclass(frozen=True)
 class AssistantResponse:
