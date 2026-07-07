@@ -4,6 +4,7 @@ from typing import Any
 from faster_whisper import WhisperModel
 from core.ports import SpeechRecognizer
 
+
 class SpeechToText(SpeechRecognizer):
 
     def __init__(self, model_name: str, language: str) -> None:
