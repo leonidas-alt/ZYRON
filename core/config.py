@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+
 @dataclass(frozen=True)
 class Settings:
 
@@ -18,6 +19,7 @@ class Settings:
     database_path: Path = Path("data/zyron.db")
     wake_word: str = "zyron"
 
+    
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()
