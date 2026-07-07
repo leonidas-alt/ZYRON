@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 from core.ports import InteractionRepository
 
+
 class SQLiteRepository(InteractionRepository):
 
     def __init__(self, database_path: Path) -> None:
