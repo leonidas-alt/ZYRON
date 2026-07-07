@@ -1,6 +1,7 @@
 from __future__ import annotations
 from core.ports import WakeWordService
 
+
 class WakeWordDetector(WakeWordService):
 
     def __init__(self, wake_word: str) -> None:
