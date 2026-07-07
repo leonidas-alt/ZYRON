@@ -4,6 +4,7 @@ import tempfile
 import edge_tts
 from core.ports import SpeechSynthesizer
 
+
 class TextToSpeech(SpeechSynthesizer):
 
     def __init__(self, voice: str) -> None:
