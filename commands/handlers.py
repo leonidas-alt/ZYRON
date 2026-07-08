@@ -59,7 +59,16 @@ class AIChatCommand(AssistantCommand):
         self._ai_client = ai_client
 
     async def execute(self, intent: CommandIntent) -> AssistantResponse:
-        return AssistantResponse(await self._ai_client.generate(intent.raw_text))
+        context = str(intent.metadata.get("conversation_context", "")).strip()
+        if context:
+            prompt = (
+                "Use o contexto recente abaixo apenas quando for útil para responder.\n\n"
+                f"{context}\n\n"
+                f"Usuário: {intent.raw_text}\nZYRON:"
+            )
+        else:
+            prompt = intent.raw_text
+        return AssistantResponse(await self._ai_client.generate(prompt))
 
 class UnknownCommand(AssistantCommand):
     async def execute(self, intent: CommandIntent) -> AssistantResponse:

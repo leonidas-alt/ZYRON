@@ -30,3 +30,11 @@ class AssistantResponse:
     text: str
     spoken: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
+@dataclass(frozen=True)
+class Interaction:
+
+    user_text: str
+    assistant_text: str
+    created_at: datetime
