@@ -6,6 +6,8 @@ from commands.command_interpreter import CommandInterpreter
 from commands.command_router import CommandRouter
 from commands.factory import CommandFactory
 from core.config import Settings
+from core.memory import ConversationMemory
+from core.models import CommandIntent
 from core.ports import (
     CommandInterpreterPort,
     InteractionRepository,
@@ -14,6 +16,7 @@ from core.ports import (
     WakeWordService,
 )
 from database.sqlite_repository import SQLiteRepository
+from plugins.manager import PluginManager
 from services.time_service import TimeService
 from services.weather_service import WeatherService
 from voice.speech_to_text import SpeechToText
@@ -32,6 +35,8 @@ class ZyronApplication:
         wake_word_detector: WakeWordService | None = None,
         interpreter: CommandInterpreterPort | None = None,
         router: CommandRouter | None = None,
+        plugin_manager: PluginManager | None = None,
+        memory: ConversationMemory | None = None,
     ) -> None:
         self.settings = settings
         self.repository = repository or SQLiteRepository(settings.database_path)
@@ -41,6 +46,8 @@ class ZyronApplication:
         self.text_to_speech = text_to_speech or TextToSpeech(settings.edge_tts_voice)
         self.wake_word_detector = wake_word_detector or WakeWordDetector(settings.wake_word)
         self.interpreter = interpreter or CommandInterpreter()
+        self.plugin_manager = plugin_manager or PluginManager()
+        self.memory = memory or ConversationMemory()
         self.router = router or self._build_router(settings)
 
     def _build_router(self, settings: Settings) -> CommandRouter:
@@ -50,8 +57,26 @@ class ZyronApplication:
             browser_controller=BrowserController(),
             time_service=self.time_service,
             weather_service=self.weather_service,
+            command_overrides=self.plugin_manager.command_overrides(),
         )
         return CommandRouter(command_factory)
+
+    async def process_text(self, command_text: str) -> str:
+        intent = self.interpreter.interpret(command_text)
+        recent_interactions = await self.repository.get_recent_interactions(self.memory.max_interactions)
+        context = self.memory.format(recent_interactions)
+        if context:
+            intent = CommandIntent(
+                command_type=intent.command_type,
+                raw_text=intent.raw_text,
+                target=intent.target,
+                metadata={**intent.metadata, "conversation_context": context},
+            )
+        response = await self.router.route(intent)
+
+        await self.repository.save_interaction(command_text, response.text)
+
+        return response.text
 
     async def bootstrap(self) -> None:
         await self.repository.initialize()
@@ -72,8 +97,5 @@ class ZyronApplication:
             if not self.wake_word_detector.is_wake_word_present(transcript):
                 continue
             command_text = self.wake_word_detector.remove_wake_word(transcript)
-            intent = self.interpreter.interpret(command_text)
-            response = await self.router.route(intent)
-            await self.repository.save_interaction(command_text, response.text)
-            if response.spoken:
-                await self.text_to_speech.speak(response.text)
+            response_text = await self.process_text(command_text)
+            await self.text_to_speech.speak(response_text)

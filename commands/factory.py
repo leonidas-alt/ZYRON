@@ -27,6 +27,7 @@ class CommandFactory:
         browser_controller: BrowserGateway,
         time_service: TimeProvider,
         weather_service: WeatherProvider,
+        command_overrides: dict[CommandType, AssistantCommand] | None = None,
     ) -> None:
         self._commands: dict[CommandType, AssistantCommand] = {
             CommandType.OPEN_APP: OpenApplicationCommand(app_launcher),
@@ -37,6 +38,8 @@ class CommandFactory:
             CommandType.AI_CHAT: AIChatCommand(ai_client),
             CommandType.UNKNOWN: UnknownCommand(),
         }
+        if command_overrides:
+            self._commands.update(command_overrides)
 
     def get(self, command_type: CommandType) -> AssistantCommand:
         return self._commands.get(command_type, self._commands[CommandType.UNKNOWN])
