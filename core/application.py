@@ -1,22 +1,18 @@
 from __future__ import annotations
-from ai.ollama_client import OllamaClient
-from automation.app_launcher import AppLauncher
-from automation.browser_controller import BrowserController
-from commands.command_interpreter import CommandInterpreter
-from commands.command_router import CommandRouter
-from commands.factory import CommandFactory
+
+from application.context import ContextService, ConversationContext
+from application.events import EventBus
+from application.memory import MemoryService
+from application.processor import CommandProcessor
+from application.router import CommandRouter
+from application.scheduler import Scheduler
+from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from core.config import Settings
-from core.memory import ConversationMemory
-from core.models import CommandIntent
-from core.ports import (
-    CommandInterpreterPort,
-    InteractionRepository,
-    SpeechRecognizer,
-    SpeechSynthesizer,
-    WakeWordService,
-)
-from database.sqlite_repository import SQLiteRepository
-from plugins.manager import PluginManager
+from domain.models import CommandIntent
+from domain.ports import InteractionRepository, SpeechRecognizer, SpeechSynthesizer, WakeWordService
+from infrastructure.persistence import SQLiteRepository
+from plugins.dependencies import PluginDependencies
+from plugins.loader import PluginLoader
 from services.time_service import TimeService
 from services.weather_service import WeatherService
 from voice.speech_to_text import SpeechToText
@@ -25,6 +21,8 @@ from voice.wake_word import WakeWordDetector
 
 
 class ZyronApplication:
+    """Composition root for the ZYRON assistant."""
+
     def __init__(
         self,
         settings: Settings,
@@ -32,53 +30,78 @@ class ZyronApplication:
         speech_to_text: SpeechRecognizer | None = None,
         text_to_speech: SpeechSynthesizer | None = None,
         wake_word_detector: WakeWordService | None = None,
-        interpreter: CommandInterpreterPort | None = None,
-        router: CommandRouter | None = None,
-        plugin_manager: PluginManager | None = None,
-        memory: ConversationMemory | None = None,
+        interpreter: object | None = None,
+        router: object | None = None,
+        plugin_manager: object | None = None,
+        memory: object | None = None,
     ) -> None:
         self.settings = settings
-        self.repository = repository or SQLiteRepository(settings.database_path)
+        self.repository = repository or SQLiteRepository(str(settings.database_path))
         self.time_service = TimeService()
-        self.weather_service = WeatherService(settings.openweather_api_key, settings.openweather_city)
-        self.speech_to_text = speech_to_text or SpeechToText(settings.whisper_model, settings.language)
+        self.weather_service = WeatherService(
+            settings.openweather_api_key,
+            settings.openweather_city,
+        )
+        self.speech_to_text = speech_to_text or SpeechToText(
+            settings.whisper_model,
+            settings.language,
+        )
         self.text_to_speech = text_to_speech or TextToSpeech(settings.edge_tts_voice)
         self.wake_word_detector = wake_word_detector or WakeWordDetector(settings.wake_word)
-        self.interpreter = interpreter or CommandInterpreter()
-        self.plugin_manager = plugin_manager or PluginManager()
-        self.memory = memory or ConversationMemory()
-        self.router = router or self._build_router(settings)
 
-    def _build_router(self, settings: Settings) -> CommandRouter:
-        command_factory = CommandFactory(
-            ai_client=OllamaClient(settings.ollama_base_url, settings.ollama_model),
-            app_launcher=AppLauncher(),
-            browser_controller=BrowserController(),
-            time_service=self.time_service,
-            weather_service=self.weather_service,
-            command_overrides=self.plugin_manager.command_overrides(),
+        self.memory_service = MemoryService(self.repository)  # type: ignore[arg-type]
+        self.plugin_registry = PluginLoader(
+            dependencies=PluginDependencies(memory=self.memory_service),
+        ).discover()
+        self.context_service = ContextService(ConversationContext())
+        self.intent_matcher = self._build_intent_matcher()
+        self.event_bus = EventBus()
+        self.scheduler = Scheduler()
+        self.router = router or CommandRouter(self.plugin_registry)
+        self.processor = CommandProcessor(
+            self.intent_matcher,
+            self.router,  # type: ignore[arg-type]
+            self.context_service,
+            self.memory_service,
+            self.event_bus,
         )
-        return CommandRouter(command_factory)
+
+    def _build_intent_matcher(self) -> IntentMatcher:
+        skill_registry = SkillRegistry()
+        for skill in self.plugin_registry.skills():
+            skill_registry.register(skill)
+        return IntentMatcher(SkillMatcher(skill_registry))
 
     async def process_text(self, command_text: str) -> str:
-        intent = self.interpreter.interpret(command_text)
-        recent_interactions = await self.repository.get_recent_interactions(self.memory.max_interactions)
-        context = self.memory.format(recent_interactions)
-        if context:
-            intent = CommandIntent(
-                command_type=intent.command_type,
-                raw_text=intent.raw_text,
-                target=intent.target,
-                metadata={**intent.metadata, "conversation_context": context},
-            )
+        recent = await self.repository.get_recent_interactions(5)
+        self.context_service.load_recent(recent)
+        if self._is_legacy_router():
+            return await self._process_with_legacy_router(command_text)
+        return await self.processor.process(command_text)
+
+    async def _process_with_legacy_router(self, command_text: str) -> str:
+        intent = self._with_context(self.intent_matcher.match(command_text))
         response = await self.router.route(intent)
-
         await self.repository.save_interaction(command_text, response.text)
-
         return response.text
+
+    def _with_context(self, intent: CommandIntent) -> CommandIntent:
+        return CommandIntent(
+            command_type=intent.command_type,
+            raw_text=intent.raw_text,
+            target=intent.target,
+            confidence=intent.confidence,
+            skill_name=intent.skill_name,
+            plugin_name=intent.plugin_name,
+            metadata=self.context_service.enrich(intent.metadata),
+        )
+
+    def _is_legacy_router(self) -> bool:
+        return not isinstance(self.router, CommandRouter)
 
     async def bootstrap(self) -> None:
         await self.repository.initialize()
+        await self.scheduler.start()
         current_time = self.time_service.current_time_text()
         temperature = await self.weather_service.current_temperature_text()
         greeting = (

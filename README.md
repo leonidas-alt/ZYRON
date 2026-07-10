@@ -1,114 +1,116 @@
 # ZYRON
 
-ZYRON é um assistente virtual local para Windows, inspirado em um Jarvis, desenvolvido em Python 3.12+ com IA local via Ollama.
+ZYRON é um assistente virtual local em Python preparado para crescer com Clean Architecture, SOLID, POO, injeção de dependência e plugins descobertos automaticamente.
 
-## Árvore do projeto
+## Arquitetura
 
 ```text
 ZYRON/
 ├── main.py
-├── core/
-│   ├── __init__.py
-│   ├── application.py
-│   ├── config.py
-│   ├── models.py
-│   └── ports.py
-├── ai/
-│   ├── __init__.py
-│   └── ollama_client.py
-├── voice/
-│   ├── __init__.py
-│   ├── speech_to_text.py
-│   ├── text_to_speech.py
-│   └── wake_word.py
-├── commands/
-│   ├── __init__.py
-│   ├── command_interpreter.py
-│   ├── command_router.py
-│   ├── factory.py
-│   └── handlers.py
-├── automation/
-│   ├── __init__.py
-│   ├── app_launcher.py
-│   └── browser_controller.py
-├── services/
-│   ├── __init__.py
-│   ├── time_service.py
-│   └── weather_service.py
-├── database/
-│   ├── __init__.py
-│   └── sqlite_repository.py
-├── data/
-├── tests/
-│   └── test_command_interpreter.py
-├── requirements.txt
+├── domain/              # Entidades, Value Objects, contratos centrais e modelos
+├── application/         # Casos de uso, pipeline, contexto, memória, eventos e scheduler
+├── infrastructure/      # Persistência SQLite e adapters concretos
+├── interfaces/          # Pontos de entrada futuros (CLI/API/voz/UI)
+├── plugins/             # Plugins independentes auto-descobertos
+│   ├── core/            # Memory, Browser, System, Application, AI
+│   ├── integrations/    # Spotify, Gmail, GitHub, Calendar, Notion, Discord etc.
+│   └── local/           # Arquivos, terminal, processos, volume, CPU, RAM etc.
+├── config/              # Configurações futuras e exemplos
+├── tests/               # Testes automatizados
+├── core/, commands/     # Wrappers de compatibilidade legada
 └── README.md
 ```
 
-## Responsabilidades das pastas
+## Pipeline de comandos
 
-- `core/`: configuração, modelos de domínio, contratos/portas e orquestração principal.
-- `ai/`: clientes e componentes de IA local, incluindo Ollama e futura memória vetorial.
-- `voice/`: captura, transcrição, wake word e síntese de voz.
-- `commands/`: interpretação, factory, handlers e roteamento de comandos com Strategy/Command Pattern.
-- `automation/`: automação de desktop e navegador.
-- `services/`: serviços de horário, clima e futuras APIs externas.
-- `database/`: persistência SQLite e base para memória persistente.
-- `data/`: arquivos locais gerados em runtime, como banco SQLite.
-- `tests/`: testes automatizados.
+Todo comando passa pelo mesmo fluxo profissional:
 
-## Arquivos principais
+```text
+Entrada
+↓
+IntentMatcher / SkillMatcher
+↓
+CommandProcessor
+↓
+PluginRegistry
+↓
+Plugin
+↓
+Resposta
+↓
+Histórico SQLite
+↓
+ConversationContext
+↓
+MemoryService / MemoryRepository
+```
 
-### `main.py`
-Objetivo: ponto de entrada da aplicação. Dependências: `core.application`, `core.config`.
+O roteamento usa objetos pequenos e coesos, sem `if` gigantes. Quando a confiança do matcher é baixa, a intenção cai para `AI_CHAT`, deixando o projeto preparado para Ollama sem depender de OpenAI.
 
-### `core/application.py`
-Objetivo: compor dependências, executar saudação inicial e manter o loop em segundo plano. Dependências: módulos de IA, voz, comandos, automação, serviços e banco.
+## Plugins
 
-### `core/config.py`
-Objetivo: carregar configurações via `.env`. Dependências: `python-dotenv`.
+Cada plugin expõe:
 
-### `core/models.py`
-Objetivo: centralizar modelos de domínio (`CommandIntent`, `AssistantResponse`). Dependências: biblioteca padrão.
+- `metadata` com `name`, `description`, `version` e `author`.
+- `skills()` com palavras-chave, sinônimos, exemplos e capacidades.
+- `can_handle()` para decidir se executa uma intenção.
+- `execute()` para retornar uma resposta segura.
 
-### `core/ports.py`
-Objetivo: definir contratos abstratos para adapters de IA, voz, automação, serviços e persistência. Dependências: biblioteca padrão.
+Os plugins são encontrados automaticamente por `PluginLoader` através de fábricas `create_plugin()`. Novos plugins devem ser independentes, não salvar tokens no código e responder amigavelmente quando credenciais de `.env` estiverem ausentes.
 
-### `ai/ollama_client.py`
-Objetivo: enviar prompts ao Ollama local. Dependências: `requests`.
+### Plugins existentes
 
-### `voice/speech_to_text.py`
-Objetivo: transcrever áudio com Faster-Whisper. Dependências: `faster-whisper`.
+- Core: Memory, Browser, System, Application e AI.
+- Integrações preparadas: Spotify, Gmail, GitHub, Google Calendar, Notion, Discord, VSCode, Docker, Git, AWS, Browser, Windows, Linux, Terminal, Steam, OBS e YouTube.
+- Locais: arquivos, pastas, terminal, processos, aplicativos, volume, brilho, bateria, CPU, RAM, disco e rede.
 
-### `voice/text_to_speech.py`
-Objetivo: sintetizar respostas com Edge-TTS. Dependências: `edge-tts`.
+Comandos perigosos (excluir/mover arquivos, terminal, processos e ações de sistema) são modelados com capacidades perigosas e devem exigir confirmação antes de execução real.
 
-### `voice/wake_word.py`
-Objetivo: detectar e remover a palavra de ativação `Zyron`. Dependências: biblioteca padrão.
+## Memória
 
-### `commands/command_interpreter.py`
-Objetivo: converter texto em intenções estruturadas. Dependências: `core.models`.
+A memória possui duas camadas:
 
-### `commands/command_router.py`
-Objetivo: rotear intenções para handlers de comandos via factory. Dependências: `commands.factory`, `core.models`.
+- Curto prazo: `ConversationContext`, com assunto ativo e histórico recente.
+- Persistente: `MemoryRepository`/`MemoryService` usando SQLite.
 
-### `commands/factory.py`
-Objetivo: encapsular a criação e seleção de handlers de comando. Dependências: portas de `core`.
+Comandos suportados:
 
-### `commands/handlers.py`
-Objetivo: implementar ações executáveis do assistente com Command Pattern. Dependências: portas de `core`.
+- `lembrar chave=valor`
+- `consultar chave`
+- `listar memórias`
+- `esquecer chave`
 
-### `automation/app_launcher.py`
-Objetivo: abrir aplicativos instalados. Dependências: `subprocess`.
+A estrutura já está preparada para memória vetorial futura, sem embeddings nesta etapa.
 
-### `automation/browser_controller.py`
-Objetivo: abrir sites e pesquisas no Google. Dependências: `webbrowser`, `urllib`.
+## Configuração
 
-### `services/time_service.py`
-Objetivo: informar horário atual. Dependências: `datetime`.
+Use `.env` para credenciais e opções:
 
-### `services/weather_service.py`
-Objetivo: informar temperatura atual com OpenWeather. Dependências: `requests`.
+```env
+ZYRON_ASSISTANT_NAME=Zyron
+ZYRON_OWNER_NAME=Leonidas
+ZYRON_DATABASE_PATH=data/zyron.db
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1
+OPENWEATHER_API_KEY=
+```
 
-### `database/sqlite_repository.py`
-Objetivo: preparar SQLite para histórico e memória persistente. Dependências: `sqlite3`.
+Nunca salve tokens no código.
+
+## Execução
+
+```bash
+python main.py
+```
+
+O comando inicializa o ZYRON, carrega plugins automaticamente e entra no loop de voz. Para testes rápidos do núcleo, use `ZyronApplication.process_text()`.
+
+## Testes
+
+```bash
+pytest
+```
+
+## Dependências
+
+As dependências estão em `requirements.txt`. O núcleo usa apenas biblioteca padrão e SQLite; voz, TTS, clima e IA local são adapters substituíveis.
