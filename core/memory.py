@@ -1,10 +1,7 @@
 from __future__ import annotations
 from core.models import Interaction
 
-
 class ConversationMemory:
-    """Builds a compact conversational context from saved interactions."""
-
     def __init__(self, max_interactions: int = 5) -> None:
         self.max_interactions = max_interactions
 
