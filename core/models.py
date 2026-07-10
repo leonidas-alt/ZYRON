@@ -5,7 +5,6 @@ from typing import Any
 
 
 class CommandType(str, Enum):
-
     OPEN_APP = "open_app"
     OPEN_SITE = "open_site"
     GOOGLE_SEARCH = "google_search"
@@ -17,7 +16,6 @@ class CommandType(str, Enum):
 
 @dataclass(frozen=True)
 class CommandIntent:
-
     command_type: CommandType
     raw_text: str
     target: str | None = None
@@ -26,7 +24,6 @@ class CommandIntent:
 
 @dataclass(frozen=True)
 class AssistantResponse:
-
     text: str
     spoken: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -34,7 +31,6 @@ class AssistantResponse:
 
 @dataclass(frozen=True)
 class Interaction:
-
     user_text: str
     assistant_text: str
     created_at: datetime
