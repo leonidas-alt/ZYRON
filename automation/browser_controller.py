@@ -5,7 +5,6 @@ import webbrowser
 from core.ports import BrowserGateway
 
 class BrowserController(BrowserGateway):
-
     async def open_site(self, site: str) -> None:
         url = site if site.startswith(("http://", "https://")) else f"https://{site}"
         await asyncio.to_thread(webbrowser.open, url)
