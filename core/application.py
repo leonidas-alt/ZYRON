@@ -25,7 +25,6 @@ from voice.wake_word import WakeWordDetector
 
 
 class ZyronApplication:
-
     def __init__(
         self,
         settings: Settings,
