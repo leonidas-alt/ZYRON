@@ -5,9 +5,6 @@ from core.ports import AssistantCommand
 
 
 class CommandPlugin(Protocol):
-    """Simple plugin contract for registering command handlers."""
-
     name: str
 
     def commands(self) -> dict[CommandType, AssistantCommand]:
-        """Return command handlers provided by the plugin."""
