@@ -3,7 +3,6 @@ from core.ports import WakeWordService
 
 
 class WakeWordDetector(WakeWordService):
-
     def __init__(self, wake_word: str) -> None:
         self.wake_word = wake_word.lower().strip()
 
