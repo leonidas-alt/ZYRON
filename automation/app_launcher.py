@@ -4,7 +4,6 @@ import subprocess
 from core.ports import ApplicationLauncher
 
 class AppLauncher(ApplicationLauncher):
-
     async def open_application(self, app_name: str) -> None:
         await asyncio.to_thread(self._open_application, app_name)
 
