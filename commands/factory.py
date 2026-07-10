@@ -19,7 +19,6 @@ from commands.handlers import (
 )
 
 class CommandFactory:
-
     def __init__(
         self,
         ai_client: AIClient,
