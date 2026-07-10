@@ -5,8 +5,6 @@ from plugins.base import CommandPlugin
 
 
 class PluginManager:
-    """Keeps an in-memory registry of command plugins."""
-
     def __init__(self) -> None:
         self._plugins: list[CommandPlugin] = []
 
