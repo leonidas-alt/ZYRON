@@ -6,7 +6,6 @@ from core.ports import WeatherProvider
 
 
 class WeatherService(WeatherProvider):
-
     def __init__(self, api_key: str, city: str, timeout: int = 15) -> None:
         self.api_key = api_key
         self.city = city
