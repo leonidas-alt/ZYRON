@@ -5,7 +5,6 @@ from core.application import ZyronApplication
 from core.config import Settings
 from core.models import AssistantResponse, CommandIntent, Interaction
 
-
 class StubRepository:
     def __init__(self) -> None:
         self.interactions = [Interaction("olá", "Olá!", datetime.now(UTC))]
@@ -20,7 +19,6 @@ class StubRepository:
     async def get_recent_interactions(self, limit: int = 5) -> list[Interaction]:
         return self.interactions[-limit:]
 
-
 class StubRouter:
     def __init__(self) -> None:
         self.intent: CommandIntent | None = None
@@ -29,7 +27,6 @@ class StubRouter:
         self.intent = intent
         return AssistantResponse("resposta simples")
 
-
 class StubSpeechToText:
     async def listen_once(self) -> None:
         return None
@@ -37,11 +34,9 @@ class StubSpeechToText:
     async def transcribe(self, audio: object) -> str:
         return ""
 
-
 class StubTextToSpeech:
     async def speak(self, text: str) -> None:
         return None
-
 
 class StubWakeWordDetector:
     def is_wake_word_present(self, text: str) -> bool:
@@ -49,7 +44,6 @@ class StubWakeWordDetector:
 
     def remove_wake_word(self, text: str) -> str:
         return text
-
 
 def test_process_text_routes_command_with_context_and_saves_interaction() -> None:
     repository = StubRepository()
