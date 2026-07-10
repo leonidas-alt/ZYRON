@@ -5,7 +5,6 @@ from core.config import Settings
 
 _EXIT_COMMANDS = {"sair", "exit", "quit"}
 
-
 async def run_cli() -> None:
     settings = Settings.from_env()
     app = ZyronApplication(settings=settings)
@@ -22,7 +21,6 @@ async def run_cli() -> None:
 
         response = await app.process_text(command_text)
         print(f"ZYRON: {response}")
-
 
 def main() -> None:
     asyncio.run(run_cli())
