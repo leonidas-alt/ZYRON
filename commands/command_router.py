@@ -3,7 +3,6 @@ from commands.factory import CommandFactory
 from core.models import AssistantResponse, CommandIntent
 
 class CommandRouter:
-
     def __init__(self, command_factory: CommandFactory) -> None:
         self._command_factory = command_factory
 
