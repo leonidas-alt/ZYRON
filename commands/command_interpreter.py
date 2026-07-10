@@ -32,7 +32,6 @@ class KeywordRule:
         return None
 
 class CommandInterpreter(CommandInterpreterPort):
-
     def __init__(self, rules: tuple[PrefixRule | KeywordRule, ...] | None = None) -> None:
         self._rules = rules or (
             PrefixRule(("abrir aplicativo ",), CommandType.OPEN_APP),
