@@ -57,3 +57,6 @@ class PluginMetadata:
     description: str
     version: str = "0.1.0"
     author: str = "ZYRON"
+    capabilities: tuple[str, ...] = ()
+    dependencies: tuple[str, ...] = ()
+    state: str = "enabled"

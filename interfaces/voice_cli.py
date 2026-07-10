@@ -22,13 +22,23 @@ def resolve_wake_word(text: str, container: ApplicationContainer) -> str | None:
     return command or None
 
 
+async def _safe_speak(container: ApplicationContainer, text: str) -> None:
+    if container.speech_synthesizer is None:
+        return
+    try:
+        await container.speech_synthesizer.speak(text)
+    except Exception:
+        logger.exception("Falha de TTS; continuando em modo terminal")
+
+
 async def run_voice(container: ApplicationContainer | None = None, max_iterations: int | None = None) -> None:
     container = container or build_voice_container(Settings.from_env())
     await container.initialize()
     if container.audio_capture is None or container.speech_recognizer is None or container.speech_synthesizer is None:
         raise RuntimeError("Container de voz incompleto.")
 
-    await container.speech_synthesizer.speak(GREETING)
+    print(f"ZYRON > {GREETING}")
+    await _safe_speak(container, GREETING)
     iterations = 0
     while True:
         if max_iterations is not None and iterations >= max_iterations:
@@ -44,28 +54,28 @@ async def run_voice(container: ApplicationContainer | None = None, max_iteration
             if normalized in EXIT_COMMANDS:
                 message = "Encerrando o ZYRON. Até logo."
                 print(f"ZYRON > {message}")
-                await container.speech_synthesizer.speak(message)
+                await _safe_speak(container, message)
                 break
             command_text = resolve_wake_word(text, container)
             if command_text is None:
                 continue
             response = await container.command_processor.process(command_text)
             print(f"ZYRON > {response}")
-            await container.speech_synthesizer.speak(response)
+            await _safe_speak(container, response)
         except MicrophoneUnavailableError:
             message = "Não consegui acessar o microfone."
             print(f"ZYRON > {message}")
-            await container.speech_synthesizer.speak(message)
+            await _safe_speak(container, message)
         except VoiceError:
             logger.exception("Erro de voz no loop")
             message = "Ocorreu um erro no sistema de voz."
             print(f"ZYRON > {message}")
-            await container.speech_synthesizer.speak(message)
+            await _safe_speak(container, message)
         except Exception:
             logger.exception("Erro no loop de voz")
             message = "Ocorreu um erro ao processar seu comando."
             print(f"ZYRON > {message}")
-            await container.speech_synthesizer.speak(message)
+            await _safe_speak(container, message)
 
 
 def main() -> None:
