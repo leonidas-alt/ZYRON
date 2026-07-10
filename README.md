@@ -100,10 +100,20 @@ Nunca salve tokens no código.
 ## Execução
 
 ```bash
+pip install -r requirements-voice.txt
 python main.py
 ```
 
-O comando inicializa o ZYRON, carrega plugins automaticamente e entra no loop de voz. Para testes rápidos do núcleo, use `ZyronApplication.process_text()`.
+O comando inicializa configurações, banco de dados, plugins, modelo Whisper, sintetizador TTS, verifica o microfone, fala `ZYRON online. Em que posso te ajudar?` e entra no loop principal de voz.
+
+O modo texto permanece disponível separadamente para desenvolvimento, testes e depuração:
+
+```bash
+pip install -r requirements.txt
+python -m interfaces.text_cli
+```
+
+Para testes rápidos do núcleo, use `ZyronApplication.process_text()`.
 
 ## Testes
 
@@ -113,4 +123,4 @@ pytest
 
 ## Dependências
 
-As dependências estão em `requirements.txt`. O núcleo usa apenas biblioteca padrão e SQLite; voz, TTS, clima e IA local são adapters substituíveis.
+As dependências comuns ficam em `requirements.txt`. Como `python main.py` inicia o modo voz, instale `requirements-voice.txt` para obter Whisper local, captura de microfone, TTS e reprodução de áudio. O modo texto usa apenas `requirements.txt` e não importa bibliotecas concretas de voz.

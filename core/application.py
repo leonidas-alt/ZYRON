@@ -1,21 +1,40 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from application.context import ContextService, ConversationContext
 from application.events import EventBus
 from application.memory import MemoryService
+from application.ports import AudioCapturePort, SpeechRecognizerPort, SpeechSynthesizerPort, WakeWordDetectorPort
 from application.processor import CommandProcessor, IntentRouter
 from application.router import CommandRouter
-from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from application.scheduler import Scheduler
+from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from core.config import Settings
-from domain.ports import InteractionRepository, SpeechRecognizer, SpeechSynthesizer, WakeWordService
+from domain.ports import InteractionRepository
 from infrastructure.persistence import SQLiteRepository
 from plugins.loader import PluginLoader
-from services.time_service import TimeService
-from services.weather_service import WeatherService
-from voice.speech_to_text import SpeechToText
-from voice.text_to_speech import TextToSpeech
-from voice.wake_word import WakeWordDetector
+
+
+@dataclass
+class ApplicationContainer:
+    settings: Settings
+    repository: InteractionRepository
+    command_processor: CommandProcessor
+    audio_capture: AudioCapturePort | None = None
+    speech_recognizer: SpeechRecognizerPort | None = None
+    speech_synthesizer: SpeechSynthesizerPort | None = None
+    wake_word_detector: WakeWordDetectorPort | None = None
+    scheduler: Scheduler | None = None
+
+    async def initialize(self) -> None:
+        await self.repository.initialize()
+        if self.scheduler is not None:
+            await self.scheduler.start()
+        if self.speech_recognizer is not None and hasattr(self.speech_recognizer, "warm_up"):
+            self.speech_recognizer.warm_up()  # type: ignore[attr-defined]
+        if self.audio_capture is not None and hasattr(self.audio_capture, "verify_microphone"):
+            self.audio_capture.verify_microphone()  # type: ignore[attr-defined]
 
 
 class ZyronApplication:
@@ -23,64 +42,64 @@ class ZyronApplication:
         self,
         settings: Settings,
         repository: InteractionRepository | None = None,
-        speech_to_text: SpeechRecognizer | None = None,
-        text_to_speech: SpeechSynthesizer | None = None,
-        wake_word_detector: WakeWordService | None = None,
+        speech_to_text: object | None = None,
+        text_to_speech: object | None = None,
+        wake_word_detector: object | None = None,
         interpreter: object | None = None,
         router: IntentRouter | None = None,
         plugin_manager: object | None = None,
         memory: object | None = None,
     ) -> None:
+        self.container = _build_base_container(settings, repository=repository, router=router)
         self.settings = settings
-        self.repository = repository or SQLiteRepository(settings.database_path)
-        self.time_service = TimeService()
-        self.weather_service = WeatherService(settings.openweather_api_key, settings.openweather_city)
-        self.speech_to_text = speech_to_text or SpeechToText(settings.whisper_model, settings.language)
-        self.text_to_speech = text_to_speech or TextToSpeech(settings.edge_tts_voice)
-        self.wake_word_detector = wake_word_detector or WakeWordDetector(settings.wake_word)
-        self.plugin_registry = PluginLoader().discover()
-
-        skill_registry = SkillRegistry()
-        for plugin_skill in self.plugin_registry.skills():
-            skill_registry.register(plugin_skill)
-
-        self.intent_matcher = IntentMatcher(SkillMatcher(skill_registry))
-        self.context_service = ContextService(ConversationContext())
-        self.memory_service = MemoryService(self.repository)  # type: ignore[arg-type]
-        self.event_bus = EventBus()
-        self.scheduler = Scheduler()
-        self.router = router or CommandRouter(self.plugin_registry)
-        self.processor = CommandProcessor(
-            self.intent_matcher,
-            self.router,
-            self.context_service,
-            self.memory_service,
-            self.event_bus,
-        )
+        self.repository = self.container.repository
+        self.processor = self.container.command_processor
 
     async def process_text(self, command_text: str) -> str:
-        self.context_service.context.recent = await self.repository.get_recent_interactions(5)
+        context_service = self.processor._context  # compatibility for existing public facade
+        context_service.context.recent = await self.repository.get_recent_interactions(5)
         return await self.processor.process(command_text)
 
-    async def bootstrap(self) -> None:
-        await self.repository.initialize()
-        await self.scheduler.start()
-        current_time = self.time_service.current_time_text()
-        temperature = await self.weather_service.current_temperature_text()
-        greeting = (
-            f"{self.settings.assistant_name} Online. Bom dia {self.settings.owner_name}. "
-            f"Agora são {current_time}. A temperatura atual é {temperature}. "
-            "Deseja programar ou jogar hoje?"
-        )
-        await self.text_to_speech.speak(greeting)
 
-    async def run(self) -> None:
-        await self.bootstrap()
-        while True:
-            audio = await self.speech_to_text.listen_once()
-            transcript = await self.speech_to_text.transcribe(audio)
-            if not self.wake_word_detector.is_wake_word_present(transcript):
-                continue
-            command_text = self.wake_word_detector.remove_wake_word(transcript)
-            response_text = await self.process_text(command_text)
-            await self.text_to_speech.speak(response_text)
+def _build_base_container(settings: Settings, repository: InteractionRepository | None = None, router: IntentRouter | None = None) -> ApplicationContainer:
+    repository = repository or SQLiteRepository(settings.database_path)
+    plugin_registry = PluginLoader().discover()
+    skill_registry = SkillRegistry()
+    for plugin_skill in plugin_registry.skills():
+        skill_registry.register(plugin_skill)
+    intent_matcher = IntentMatcher(SkillMatcher(skill_registry))
+    context_service = ContextService(ConversationContext())
+    memory_service = MemoryService(repository)  # type: ignore[arg-type]
+    event_bus = EventBus()
+    command_router = router or CommandRouter(plugin_registry)
+    processor = CommandProcessor(intent_matcher, command_router, context_service, memory_service, event_bus)
+    return ApplicationContainer(settings=settings, repository=repository, command_processor=processor, scheduler=Scheduler())
+
+
+def build_text_container(settings: Settings) -> ApplicationContainer:
+    return _build_base_container(settings)
+
+
+def build_voice_container(settings: Settings) -> ApplicationContainer:
+    from infrastructure.voice.audio_capture import SoundDeviceAudioCapture
+    from infrastructure.voice.speech_recognizer import FasterWhisperSpeechRecognizer
+    from infrastructure.voice.speech_synthesizer import EdgeSpeechSynthesizer
+    from infrastructure.voice.wake_word_detector import TextWakeWordDetector
+
+    container = _build_base_container(settings)
+    container.audio_capture = SoundDeviceAudioCapture(
+        device=settings.microphone_device,
+        sample_rate=settings.audio_sample_rate,
+        channels=settings.audio_channels,
+        max_duration_seconds=settings.audio_max_duration_seconds,
+        silence_duration_seconds=settings.audio_silence_duration_seconds,
+    )
+    container.speech_recognizer = FasterWhisperSpeechRecognizer(
+        model_name=settings.whisper_model,
+        language=settings.whisper_language,
+        device=settings.whisper_device,
+        compute_type=settings.whisper_compute_type,
+    )
+    container.speech_synthesizer = EdgeSpeechSynthesizer(settings.tts_voice, settings.tts_rate, settings.tts_volume)
+    container.wake_word_detector = TextWakeWordDetector(settings.voice_wake_word)
+    return container
