@@ -5,21 +5,18 @@ from core.models import AssistantResponse, CommandIntent, Interaction
 
 
 class AIClient(ABC):
-
     @abstractmethod
     async def generate(self, prompt: str) -> str:
         raise NotImplementedError
 
 
 class ApplicationLauncher(ABC):
-
     @abstractmethod
     async def open_application(self, app_name: str) -> None:
         raise NotImplementedError
 
 
 class BrowserGateway(ABC):
-
     @abstractmethod
     async def open_site(self, site: str) -> None:
         raise NotImplementedError
@@ -30,21 +27,18 @@ class BrowserGateway(ABC):
 
 
 class TimeProvider(ABC):
-
     @abstractmethod
     def current_time_text(self) -> str:
         raise NotImplementedError
 
 
 class WeatherProvider(ABC):
-
     @abstractmethod
     async def current_temperature_text(self) -> str:
         raise NotImplementedError
 
 
 class InteractionRepository(ABC):
-
     @abstractmethod
     async def initialize(self) -> None:
         raise NotImplementedError
@@ -59,7 +53,6 @@ class InteractionRepository(ABC):
 
 
 class SpeechRecognizer(ABC):
-
     @abstractmethod
     async def listen_once(self) -> Any:
         raise NotImplementedError
@@ -70,14 +63,12 @@ class SpeechRecognizer(ABC):
 
 
 class SpeechSynthesizer(ABC):
-
     @abstractmethod
     async def speak(self, text: str) -> None:
         raise NotImplementedError
 
 
 class WakeWordService(ABC):
-
     @abstractmethod
     def is_wake_word_present(self, text: str) -> bool:
         raise NotImplementedError
@@ -88,7 +79,6 @@ class WakeWordService(ABC):
 
 
 class CommandInterpreterPort(ABC):
-
     @abstractmethod
     def interpret(self, text: str) -> CommandIntent:
         raise NotImplementedError
