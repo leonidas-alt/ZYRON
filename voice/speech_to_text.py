@@ -6,7 +6,6 @@ from core.ports import SpeechRecognizer
 
 
 class SpeechToText(SpeechRecognizer):
-
     def __init__(self, model_name: str, language: str) -> None:
         self.model_name = model_name
         self.language = language
