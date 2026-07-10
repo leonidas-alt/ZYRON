@@ -6,7 +6,6 @@ import os
 
 @dataclass(frozen=True)
 class Settings:
-
     assistant_name: str = "Zyron"
     owner_name: str = "Leonidas"
     language: str = "pt-BR"
