@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from uuid import uuid4
 
-from application.ports import SpeechSynthesizerPort
+from src.ai.application.ports import SpeechSynthesizerPort
 from infrastructure.voice.exceptions import SpeechSynthesisError
 
 

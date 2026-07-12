@@ -2,7 +2,7 @@ from __future__ import annotations
 import importlib, inspect, logging, pkgutil
 from typing import Any
 from core.config import Settings
-from application.memory import MemoryService
+from src.ai.application.memory import MemoryService
 from infrastructure.persistence import SQLiteRepository
 from automation.browser_controller import BrowserController
 from automation.app_launcher import AppLauncher

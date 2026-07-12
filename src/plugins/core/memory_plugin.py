@@ -1,5 +1,5 @@
 from __future__ import annotations
-from application.memory import MemoryService
+from src.ai.application.memory import MemoryService
 from domain.models import AssistantResponse, CommandIntent, PluginMetadata, Skill
 from domain.ports import PluginInterface
 

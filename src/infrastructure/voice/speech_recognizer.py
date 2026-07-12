@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from application.ports import SpeechRecognizerPort
+from src.ai.application.ports import SpeechRecognizerPort
 from infrastructure.voice.audio_capture import CapturedAudio
 from infrastructure.voice.exceptions import TranscriptionError
 

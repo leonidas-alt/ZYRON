@@ -3,14 +3,14 @@ from dataclasses import dataclass
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from application.context import ContextService, ConversationContext
-from application.events import EventBus
-from application.memory import MemoryService
-from application.ports import AudioCapturePort, SpeechRecognizerPort, SpeechSynthesizerPort, WakeWordDetectorPort
-from application.processor import CommandProcessor, IntentRouter
-from application.router import CommandRouter
-from application.scheduler import Scheduler
-from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
+from src.ai.application.context import ContextService, ConversationContext
+from src.ai.application.events import EventBus
+from src.ai.application.memory import MemoryService
+from src.ai.application.ports import AudioCapturePort, SpeechRecognizerPort, SpeechSynthesizerPort, WakeWordDetectorPort
+from src.ai.application.processor import CommandProcessor, IntentRouter
+from src.ai.application.router import CommandRouter
+from src.ai.application.scheduler import Scheduler
+from src.ai.application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from automation.app_launcher import AppLauncher
 from automation.browser_controller import BrowserController
 from core.config import Settings

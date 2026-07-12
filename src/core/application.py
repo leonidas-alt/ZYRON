@@ -1,5 +1,5 @@
 from __future__ import annotations
-from application.processor import IntentRouter
+from src.ai.application.processor import IntentRouter
 from bootstrap.container import ApplicationContainer, build_base_container, build_text_container, build_voice_container
 from core.config import Settings
 from domain.ports import InteractionRepository

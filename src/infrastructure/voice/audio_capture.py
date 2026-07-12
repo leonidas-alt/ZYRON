@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any
 
-from application.ports import AudioCapturePort
+from src.ai.application.ports import AudioCapturePort
 from infrastructure.voice.exceptions import AudioCaptureError, MicrophoneUnavailableError
 
 

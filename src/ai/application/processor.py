@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from application.context import ContextService
-from application.events import EventBus
-from application.memory import MemoryService
-from application.skills import IntentMatcher
+from src.ai.application.context import ContextService
+from src.ai.application.events import EventBus
+from src.ai.application.memory import MemoryService
+from src.ai.application.skills import IntentMatcher
 from domain.models import AssistantResponse, CommandIntent
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from application.ports import WakeWordDetectorPort
+from src.ai.application.ports import WakeWordDetectorPort
 
 
 class TextWakeWordDetector(WakeWordDetectorPort):

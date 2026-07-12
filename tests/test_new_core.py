@@ -1,11 +1,11 @@
 from __future__ import annotations
 import asyncio
-from application.context import ContextService
-from application.events import EventBus
-from application.memory import MemoryService
-from application.processor import CommandProcessor
-from application.router import CommandRouter
-from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
+from src.ai.application.context import ContextService
+from src.ai.application.events import EventBus
+from src.ai.application.memory import MemoryService
+from src.ai.application.processor import CommandProcessor
+from src.ai.application.router import CommandRouter
+from src.ai.application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from infrastructure.persistence import SQLiteRepository
 from plugins.loader import PluginLoader
 

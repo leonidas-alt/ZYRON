@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from application.context import ConversationContext
-from application.memory import MemoryService
-from application.skills import IntentMatcher, SkillMatcher, SkillRegistry
+from src.ai.application.context import ConversationContext
+from src.ai.application.memory import MemoryService
+from src.ai.application.skills import IntentMatcher, SkillMatcher, SkillRegistry
 from automation.app_launcher import AppLauncher
 from automation.browser_controller import BrowserController
 from bootstrap.container import build_text_container
