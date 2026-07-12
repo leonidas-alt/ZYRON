@@ -41,10 +41,11 @@ class CommandProcessor:
 
     def _build_contextual_intent(self, text: str) -> CommandIntent:
         intent = self._matcher.match(text)
+        target = intent.target or self._context.resolve_reference(text)
         return CommandIntent(
             command_type=intent.command_type,
             raw_text=intent.raw_text,
-            target=intent.target,
+            target=target,
             confidence=intent.confidence,
             skill_name=intent.skill_name,
             plugin_name=intent.plugin_name,
@@ -63,4 +64,7 @@ class CommandProcessor:
             response.text,
             intent.plugin_name,
             intent.target or str(intent.metadata.get("active_subject") or ""),
+            intent.skill_name,
+            intent.command_type.value if hasattr(intent.command_type, "value") else str(intent.command_type),
+            intent.metadata,
         )
