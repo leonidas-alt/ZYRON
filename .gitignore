@@ -1,9 +1,39 @@
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
 .pytest_cache/
-.venv/
-.env
-data/*.db
-data/*.sqlite
+.ruff_cache/
+.coverage
+htmlcov/
 
-.private/
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Variáveis e credenciais
+.env
+*.pem
+credentials.json
+token.json
+
+# Dados locais
+data/*
+!data/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Sistema e editores
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Áudio temporário
+*.mp3
+*.wav
