@@ -29,7 +29,7 @@ def build_startup_message(name: str) -> str:
     
     return (
         f"{name} online."
-        f"\n{greeting}, Leonidas."
+        f"\n{greeting}, {owner_name}."
         f"\nAgora são {current_time}."
         "\nO que gostaria de fazer?"
         "\nVai estudar, programar ou jogar?"
