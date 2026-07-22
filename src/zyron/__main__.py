@@ -14,8 +14,10 @@ async def run() -> None:
     try:
         await cli.run()
     finally:
-        container.repository.close()
-        container.plugin_registry.disable_all()
+        try:
+            container.plugin_registry.disable_all()
+        finally:
+            container.repository.close()
 
 
 def main() -> None:
