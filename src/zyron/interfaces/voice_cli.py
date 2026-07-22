@@ -389,62 +389,30 @@ class VoiceCLI:
 
 async def run_voice_cli(
     container: ApplicationContainer | None = None,
-    audio_capture: AudioCapture | None = None,
-    speech_recognizer: SpeechRecognizer | None = None,
-    speech_synthesizer: SpeechSynthesizer | None = None,
-    wake_word_detector: WakeWordDetector | None = None,
 ) -> None:
     resolved_container = container or build_container()
 
-    resolved_audio_capture = (
-        audio_capture
-        or AudioCapture(
-            sample_rate=16_000,
-            channels=1,
-            dtype="int16",
+    if not resolved_container.settings.voice_enabled:
+        raise RuntimeError(
+            "O modo de voz está desativado nas configurações."
         )
-    )
-
-    resolved_speech_recognizer = (
-        speech_recognizer
-        or SpeechRecognizer(
-            model_path="models/vosk-pt",
-        )
-    )
-
-    resolved_speech_synthesizer = (
-        speech_synthesizer
-        or SpeechSynthesizer(
-            rate=180,
-            volume=1.0,
-        )
-    )
-
-    resolved_wake_word_detector = (
-        wake_word_detector
-        or WakeWordDetector(
-            wake_words=(
-                "zyron",
-                "ziron",
-                "sairon",
-            )
-        )
-    )
 
     cli = VoiceCLI(
         container=resolved_container,
-        audio_capture=resolved_audio_capture,
-        speech_recognizer=resolved_speech_recognizer,
-        speech_synthesizer=resolved_speech_synthesizer,
-        wake_word_detector=resolved_wake_word_detector,
-        recording_duration_seconds=5.0,
+        audio_capture=resolved_container.audio_capture,
+        speech_recognizer=resolved_container.speech_recognizer,
+        speech_synthesizer=resolved_container.speech_synthesizer,
+        wake_word_detector=resolved_container.wake_word_detector,
+        recording_duration_seconds=(
+            resolved_container.settings.recording_duration_seconds
+        ),
     )
 
     try:
         await cli.run()
     finally:
         try:
-            resolved_speech_synthesizer.stop()
+            resolved_container.speech_synthesizer.stop()
         except SpeechSynthesisError:
             pass
 
