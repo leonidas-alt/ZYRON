@@ -12,8 +12,9 @@ class ApplicationContainer:
     assistant: ZyronAssistant
 
 def build_container(
-    resolved_se  settings: Settings | None = None,
-) -> ApplicationContainer:ttings = settings or Settings.from_env()
+    settings: Settings | None = None,
+) -> ApplicationContainer:
+    resolved_settings = settings or Settings.from_env()
 
     ai_client = OllamaClient(
         base_url=resolved_settings.ollama_base_url,
