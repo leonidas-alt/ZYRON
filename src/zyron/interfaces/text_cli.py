@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
 
 from zyron.bootstrap.container import ApplicationContainer, build_container
-from zyron.domain.exceptions import ZyronError
 
 
 EXIT_COMMANDS = {
@@ -14,67 +13,111 @@ EXIT_COMMANDS = {
     "quit",
 }
 
-def build_startup_message(
-    name: str,
-    owner_name: str,
-) -> str:
-    now = datetime.now()
-    current_time = now.strftime("%H:%M")
 
-    hour = now.hour
+class TextCLI:
+    def __init__(
+        self,
+        container: ApplicationContainer,
+    ) -> None:
+        self._container = container
+        self._running = False
 
-    if 5 <= hour < 12:
-        greeting = "Bom dia"
-    elif 12 <= hour < 18:
-        greeting = "Boa tarde"
-    else: 
-        greeting = "Boa noite"
-    
-    return (
-        f"{name} online."
-        f"\n{greeting}, {owner_name}."
-        f"\nAgora são {current_time}."
-        "\nO que gostaria de fazer?"
-        "\nVai estudar, programar ou jogar?"
-    )
+    async def run(self) -> None:
+        self._running = True
+
+        self._show_startup_message()
+
+        while self._running:
+            try:
+                user_text = await self._read_input()
+            except (EOFError, KeyboardInterrupt):
+                self.stop()
+                break
+
+            if not user_text:
+                continue
+
+            if self._is_exit_command(user_text):
+                self.stop()
+                break
+
+            await self._process_input(user_text)
+
+        self._show_shutdown_message()
+
+    def stop(self) -> None:
+        self._running = False
+
+    async def _process_input(
+        self,
+        user_text: str,
+    ) -> None:
+        permission_result = self._container.permissions.check(user_text)
+
+        if permission_result is not None:
+            print(f"\nZYRON: {permission_result.message}\n")
+            return
+
+        try:
+            response = await self._container.assistant.process(user_text)
+        except Exception as error:
+            print(
+                "\nZYRON: Não consegui processar sua solicitação. "
+                f"Erro: {error}\n"
+            )
+            return
+
+        self._container.repository.save_interaction(
+            user_text=user_text,
+            assistant_text=response.text,
+            source=response.source,
+        )
+
+        print(f"\nZYRON: {response.text}\n")
+
+    async def _read_input(self) -> str:
+        user_text = await asyncio.to_thread(
+            input,
+            "Você: ",
+        )
+
+        return user_text.strip()
+
+    def _is_exit_command(
+        self,
+        user_text: str,
+    ) -> bool:
+        return user_text.lower().strip() in EXIT_COMMANDS
+
+    def _show_startup_message(self) -> None:
+        assistant_name = self._container.settings.assistant_name
+
+        print()
+        print(f"{assistant_name} Online. Em que posso te ajudar?")
+        print("Digite 'sair' para encerrar.")
+        print()
+
+    def _show_shutdown_message(self) -> None:
+        assistant_name = self._container.settings.assistant_name
+
+        print()
+        print(f"{assistant_name}: Sistema encerrado.")
+        print()
+
 
 async def run_text_cli(
     container: ApplicationContainer | None = None,
 ) -> None:
-    app = container or build_container()
-    name = app.settings.assistant_name
+    resolved_container = container or build_container()
 
-    startup_message = build_startup_message(
-    name,
-    app.settings.owner_name,
-    )
+    cli = TextCLI(resolved_container)
 
-    print(f"\n{startup_message}")
-    print("Digite 'sair' para encerrar.\n")
+    await cli.run()
 
-    while True:
-        try:
-            user_text = input("Você > ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print(f"\n{name} > Encerrando. Até logo.")
-            break
 
-        if not user_text:
-            continue
+def main() -> None:
+    asyncio.run(run_text_cli())
 
-        if user_text.lower() in EXIT_COMMANDS:
-            print(f"{name} > Encerrando. Até logo.")
-            break
 
-        try:
-            response = await app.assistant.process(user_text)
-            print(f"{name} > {response.text}\n")
-
-        except ZyronError as exc:
-            print(f"{name} > {exc}\n")
-
-        except Exception:
-            print(
-                f"{name} > Ocorreu um erro inesperado "
-                "ao processar sua solicitação.\n"
-            )
+if __name__ == "__main__":
+    main()
