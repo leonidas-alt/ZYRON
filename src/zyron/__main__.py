@@ -1,25 +1,34 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 
-from zyron.config.settings import Settings
-from zyron.interfaces.text_cli import run_text_cli
+from zyron.bootstrap.container import build_container
+from zyron.interfaces.text_cli import TextCLI
 
 
 async def run() -> None:
-    settings = Settings.from_env()
+    container = build_container()
+    cli = TextCLI(container)
 
-    if settings.mode != "text":
-        print(
-            "O modo de voz ainda não foi implementado nesta versão. "
-            "Iniciando o modo texto."
-        )
-
-    await run_text_cli()
+    try:
+        await cli.run()
+    finally:
+        container.repository.close()
+        container.plugin_registry.disable_all()
 
 
 def main() -> None:
-    asyncio.run(run())
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        print("\nZYRON: Sistema encerrado.")
+    except Exception as error:
+        print(
+            f"\nZYRON: Não foi possível iniciar o sistema: {error}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1) from error
 
 
 if __name__ == "__main__":
