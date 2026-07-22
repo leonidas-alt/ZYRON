@@ -8,6 +8,10 @@ from zyron.application.permissions.permission_service import PermissionService
 from zyron.config.settings import Settings
 from zyron.infrastructure.ai.ollama_client import OllamaClient
 from zyron.infrastructure.persistence.sqlite_repository import SQLiteRepository
+from zyron.infrastructure.voice.audio_capture import AudioCapture
+from zyron.infrastructure.voice.speech_recognizer import SpeechRecognizer
+from zyron.infrastructure.voice.speech_synthesizer import SpeechSynthesizer
+from zyron.infrastructure.voice.wake_word_detector import WakeWordDetector
 from zyron.plugins.loader import PluginLoadResult, PluginLoader
 from zyron.plugins.registry import PluginRegistry
 
@@ -21,6 +25,10 @@ class ApplicationContainer:
     repository: SQLiteRepository
     plugin_registry: PluginRegistry
     plugin_load_result: PluginLoadResult
+    audio_capture: AudioCapture
+    speech_recognizer: SpeechRecognizer
+    speech_synthesizer: SpeechSynthesizer
+    wake_word_detector: WakeWordDetector
 
 
 def build_container(
@@ -28,7 +36,9 @@ def build_container(
 ) -> ApplicationContainer:
     resolved_settings = settings or Settings.from_env()
 
-    repository = SQLiteRepository()
+    repository = SQLiteRepository(
+        database_path=resolved_settings.database_path,
+    )
 
     conversation_context = ConversationContext(
         repository=repository,
@@ -58,6 +68,27 @@ def build_container(
         enable=False,
     )
 
+    audio_capture = AudioCapture(
+        sample_rate=resolved_settings.audio_sample_rate,
+        channels=resolved_settings.audio_channels,
+        dtype=resolved_settings.audio_dtype,
+        device=resolved_settings.audio_device,
+    )
+
+    speech_recognizer = SpeechRecognizer(
+        model_path=resolved_settings.vosk_model_path,
+    )
+
+    speech_synthesizer = SpeechSynthesizer(
+        rate=resolved_settings.voice_rate,
+        volume=resolved_settings.voice_volume,
+        voice_name=resolved_settings.voice_name,
+    )
+
+    wake_word_detector = WakeWordDetector(
+        wake_words=resolved_settings.wake_words,
+    )
+
     return ApplicationContainer(
         settings=resolved_settings,
         assistant=assistant,
@@ -66,4 +97,8 @@ def build_container(
         repository=repository,
         plugin_registry=plugin_registry,
         plugin_load_result=plugin_load_result,
+        audio_capture=audio_capture,
+        speech_recognizer=speech_recognizer,
+        speech_synthesizer=speech_synthesizer,
+        wake_word_detector=wake_word_detector,
     )
