@@ -14,7 +14,10 @@ EXIT_COMMANDS = {
     "quit",
 }
 
-def build_startup_message(name: str) -> str:
+def build_startup_message(
+    name: str,
+    owner_name: str,
+) -> str:
     now = datetime.now()
     current_time = now.strftime("%H:%M")
 
@@ -41,7 +44,10 @@ async def run_text_cli(
     app = container or build_container()
     name = app.settings.assistant_name
 
-    startup_message = build_startup_message(name)
+    startup_message = build_startup_message(
+    name,
+    app.settings.owner_name,
+    )
 
     print(f"\n{startup_message}")
     print("Digite 'sair' para encerrar.\n")
