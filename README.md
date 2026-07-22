@@ -238,49 +238,6 @@ exit
 quit
 ```
 
-## Roadmap
-
-### Fase 1 — Fundação
-
-- [x] Criar o pacote Python e a estrutura em camadas;
-- [x] configurar variáveis de ambiente;
-- [x] criar o cliente do Ollama;
-- [x] criar a base da interface por texto;
-- [ ] estabilizar a inicialização;
-- [ ] adicionar os primeiros testes automatizados.
-
-### Fase 2 — Entender e lembrar
-
-- [ ] implementar matcher, roteador e processador de comandos;
-- [ ] criar memória persistente com SQLite;
-- [ ] manter o contexto das últimas conversas;
-- [ ] criar respostas locais que não dependam do Ollama.
-
-### Fase 3 — Obedecer com segurança
-
-- [ ] classificar ações por nível de risco;
-- [ ] solicitar confirmação antes de agir;
-- [ ] implementar uma lista de aplicativos permitidos;
-- [ ] criar registro e carregamento de plugins;
-- [ ] abrir aplicativos sem executar diretamente o texto do usuário.
-
-### Fase 4 — Ouvir e falar
-
-- [ ] capturar áudio do microfone;
-- [ ] transcrever português com Faster Whisper;
-- [ ] gerar e reproduzir respostas por voz;
-- [ ] implementar a interface de voz;
-- [ ] adicionar palavra de ativação e escuta contínua.
-
-### Fase 5 — Ecossistema ZYRON
-
-- [ ] criar rotinas de estudo, programação e jogos;
-- [ ] integrar Google Calendar e Spotify;
-- [ ] controlar navegador, arquivos e janelas;
-- [ ] integrar Notion e Discord;
-- [ ] criar um dashboard;
-- [ ] desenvolver uma conexão futura com celular.
-
 ## Segurança
 
 O ZYRON deverá seguir estas regras durante toda a sua evolução:
