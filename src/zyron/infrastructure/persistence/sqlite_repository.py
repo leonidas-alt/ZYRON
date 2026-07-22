@@ -11,16 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class SQLiteRepository:
-    
     DEFAULT_DATABASE_PATH = Path("data/zyron.db")
 
     def __init__(
         self,
         database_path: str | Path = DEFAULT_DATABASE_PATH,
     ) -> None:
-
         self._database_path = Path(database_path)
-
         self._prepare_database_directory()
         self.initialize()
 
@@ -29,7 +26,6 @@ class SQLiteRepository:
         return self._database_path
 
     def initialize(self) -> None:
-
         with self._connection() as connection:
             connection.executescript(
                 """
@@ -69,7 +65,6 @@ class SQLiteRepository:
         key: str,
         value: str,
     ) -> None:
-
         with self._connection() as connection:
             connection.execute(
                 """
@@ -100,7 +95,6 @@ class SQLiteRepository:
         self,
         key: str,
     ) -> dict[str, Any] | None:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -128,7 +122,6 @@ class SQLiteRepository:
         self,
         key: str,
     ) -> bool:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -153,7 +146,6 @@ class SQLiteRepository:
     def list_memories(
         self,
     ) -> list[dict[str, Any]]:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -176,7 +168,6 @@ class SQLiteRepository:
         ]
 
     def count_memories(self) -> int:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -193,7 +184,6 @@ class SQLiteRepository:
         return int(row["total"])
 
     def clear_memories(self) -> int:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -218,7 +208,6 @@ class SQLiteRepository:
         assistant_text: str,
         source: str = "unknown",
     ) -> None:
-
         with self._connection() as connection:
             connection.execute(
                 """
@@ -247,7 +236,6 @@ class SQLiteRepository:
         self,
         limit: int = 50,
     ) -> list[dict[str, Any]]:
-
         if limit <= 0:
             return []
 
@@ -278,7 +266,6 @@ class SQLiteRepository:
         self,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
-
         interactions = self.list_interactions(limit)
 
         interactions.reverse()
@@ -286,7 +273,6 @@ class SQLiteRepository:
         return interactions
 
     def count_interactions(self) -> int:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -303,7 +289,6 @@ class SQLiteRepository:
         return int(row["total"])
 
     def clear_interactions(self) -> int:
-
         with self._connection() as connection:
             cursor = connection.execute(
                 """
@@ -323,13 +308,11 @@ class SQLiteRepository:
         return deleted_count
 
     def close(self) -> None:
-
         logger.debug(
             "SQLiteRepository utiliza conexões por operação."
         )
 
     def health_check(self) -> bool:
-
         try:
             with self._connection() as connection:
                 cursor = connection.execute(
@@ -350,7 +333,6 @@ class SQLiteRepository:
             return False
 
     def _prepare_database_directory(self) -> None:
-
         if str(self._database_path) == ":memory:":
             return
 
@@ -363,7 +345,6 @@ class SQLiteRepository:
     def _connection(
         self,
     ) -> Iterator[sqlite3.Connection]:
-
         connection = sqlite3.connect(
             self._database_path,
             timeout=10,
