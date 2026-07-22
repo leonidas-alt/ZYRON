@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from zyron.application.assistant import ZyronAssistant
+from zyron.application.context.conversation import ConversationContext
 from zyron.application.permissions.permission_service import PermissionService
 from zyron.config.settings import Settings
 from zyron.infrastructure.ai.ollama_client import OllamaClient
@@ -15,6 +16,7 @@ from zyron.plugins.registry import PluginRegistry
 class ApplicationContainer:
     settings: Settings
     assistant: ZyronAssistant
+    conversation_context: ConversationContext
     permissions: PermissionService
     repository: SQLiteRepository
     plugin_registry: PluginRegistry
@@ -26,6 +28,13 @@ def build_container(
 ) -> ApplicationContainer:
     resolved_settings = settings or Settings.from_env()
 
+    repository = SQLiteRepository()
+
+    conversation_context = ConversationContext(
+        repository=repository,
+        history_limit=10,
+    )
+
     ai_client = OllamaClient(
         base_url=resolved_settings.ollama_base_url,
         model=resolved_settings.ollama_model,
@@ -36,10 +45,10 @@ def build_container(
         ai_client=ai_client,
         assistant_name=resolved_settings.assistant_name,
         owner_name=resolved_settings.owner_name,
+        conversation_context=conversation_context,
     )
 
     permissions = PermissionService()
-    repository = SQLiteRepository()
 
     plugin_registry = PluginRegistry()
     plugin_loader = PluginLoader(plugin_registry)
@@ -52,6 +61,7 @@ def build_container(
     return ApplicationContainer(
         settings=resolved_settings,
         assistant=assistant,
+        conversation_context=conversation_context,
         permissions=permissions,
         repository=repository,
         plugin_registry=plugin_registry,
