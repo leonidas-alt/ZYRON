@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from zyron.application.assistant import ZyronAssistant
+from zyron.application.confirmations import ConfirmationService
 from zyron.application.context.conversation import ConversationContext
 from zyron.application.permissions.permission_service import PermissionService
 from zyron.config.settings import Settings
@@ -22,6 +23,7 @@ class ApplicationContainer:
     assistant: ZyronAssistant
     conversation_context: ConversationContext
     permissions: PermissionService
+    confirmation_service: ConfirmationService
     repository: SQLiteRepository
     plugin_registry: PluginRegistry
     plugin_load_result: PluginLoadResult
@@ -60,8 +62,15 @@ def build_container(
 
     permissions = PermissionService()
 
+    confirmation_service = ConfirmationService(
+        timeout_seconds=30,
+    )
+
     plugin_registry = PluginRegistry()
-    plugin_loader = PluginLoader(plugin_registry)
+
+    plugin_loader = PluginLoader(
+        plugin_registry,
+    )
 
     plugin_load_result = plugin_loader.load_plugins(
         initialize=True,
@@ -94,6 +103,7 @@ def build_container(
         assistant=assistant,
         conversation_context=conversation_context,
         permissions=permissions,
+        confirmation_service=confirmation_service,
         repository=repository,
         plugin_registry=plugin_registry,
         plugin_load_result=plugin_load_result,
