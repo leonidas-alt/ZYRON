@@ -6,7 +6,6 @@ import re
 
 
 class Intent(StrEnum):
-    """Tipos de intenções suportadas pelo ZYRON."""
 
     CHAT = "chat"
 
@@ -29,9 +28,6 @@ class Intent(StrEnum):
 
 @dataclass(slots=True)
 class CommandMatch:
-    """
-    Resultado da interpretação da mensagem.
-    """
 
     intent: Intent
 
@@ -41,9 +37,6 @@ class CommandMatch:
 
 
 class CommandMatcher:
-    """
-    Analisa uma mensagem do usuário e determina sua intenção.
-    """
 
     EXIT_COMMANDS = {
         "sair",
@@ -87,9 +80,6 @@ class CommandMatcher:
     )
 
     def match(self, text: str) -> CommandMatch:
-        """
-        Descobre qual comando o usuário deseja executar.
-        """
 
         cleaned = text.strip().lower()
 
