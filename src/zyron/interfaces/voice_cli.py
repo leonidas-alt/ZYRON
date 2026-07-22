@@ -8,19 +8,34 @@ from zyron.infrastructure.voice.exceptions import (
     AudioCaptureError,
     SpeechRecognitionError,
     SpeechSynthesisError,
+    WakeWordDetectionError,
 )
 from zyron.infrastructure.voice.speech_recognizer import SpeechRecognizer
 from zyron.infrastructure.voice.speech_synthesizer import SpeechSynthesizer
+from zyron.infrastructure.voice.wake_word_detector import WakeWordDetector
 
 
 EXIT_COMMANDS = {
     "sair",
     "encerrar",
-    "fechar",
     "desligar",
     "finalizar",
+    "fechar zyron",
+    "desligar zyron",
+    "encerrar zyron",
     "exit",
     "quit",
+}
+
+SLEEP_COMMANDS = {
+    "parar de ouvir",
+    "pare de ouvir",
+    "pode parar de ouvir",
+    "voltar ao modo de espera",
+    "volte ao modo de espera",
+    "modo de espera",
+    "ficar em espera",
+    "fique em espera",
 }
 
 
@@ -31,6 +46,7 @@ class VoiceCLI:
         audio_capture: AudioCapture,
         speech_recognizer: SpeechRecognizer,
         speech_synthesizer: SpeechSynthesizer,
+        wake_word_detector: WakeWordDetector,
         recording_duration_seconds: float = 5.0,
     ) -> None:
         if recording_duration_seconds <= 0:
@@ -42,8 +58,10 @@ class VoiceCLI:
         self._audio_capture = audio_capture
         self._speech_recognizer = speech_recognizer
         self._speech_synthesizer = speech_synthesizer
+        self._wake_word_detector = wake_word_detector
         self._recording_duration_seconds = recording_duration_seconds
         self._running = False
+        self._conversation_active = False
 
     async def run(self) -> None:
         self._running = True
@@ -52,34 +70,128 @@ class VoiceCLI:
 
         while self._running:
             try:
-                user_text = await self._listen()
+                recognized_text = await self._listen()
             except KeyboardInterrupt:
                 self.stop()
                 break
 
-            if not user_text:
+            if not recognized_text:
                 continue
 
-            print(f"\nVocê: {user_text}")
+            print(f"\nVocê: {recognized_text}")
 
-            if self._is_exit_command(user_text):
+            normalized_text = self._normalize_command(
+                recognized_text
+            )
+
+            if self._is_exit_command(normalized_text):
                 self.stop()
                 break
 
-            await self._process_input(user_text)
+            if self._conversation_active:
+                await self._handle_active_conversation(
+                    recognized_text
+                )
+                continue
+
+            await self._handle_waiting_mode(
+                recognized_text
+            )
 
         await self._show_shutdown_message()
 
     def stop(self) -> None:
         self._running = False
+        self._conversation_active = False
+
+    async def _handle_waiting_mode(
+        self,
+        recognized_text: str,
+    ) -> None:
+        try:
+            wake_word_result = self._wake_word_detector.detect(
+                recognized_text
+            )
+        except WakeWordDetectionError as error:
+            print(
+                f"\n{self._assistant_name}: "
+                f"Não consegui verificar a palavra de ativação. "
+                f"{error}"
+            )
+            return
+
+        if not wake_word_result.detected:
+            print(
+                f"{self._assistant_name}: "
+                "Aguardando a palavra de ativação."
+            )
+            return
+
+        self._conversation_active = True
+
+        if wake_word_result.has_command:
+            command = wake_word_result.command.strip()
+
+            if self._is_exit_command(
+                self._normalize_command(command)
+            ):
+                self.stop()
+                return
+
+            await self._process_input(command)
+            return
+
+        await self._respond(
+            "Estou ouvindo. Em que posso te ajudar?"
+        )
+
+    async def _handle_active_conversation(
+        self,
+        recognized_text: str,
+    ) -> None:
+        normalized_text = self._normalize_command(
+            recognized_text
+        )
+
+        if self._is_sleep_command(normalized_text):
+            self._conversation_active = False
+
+            await self._respond(
+                "Certo. Voltando ao modo de espera."
+            )
+            return
+
+        try:
+            wake_word_result = self._wake_word_detector.detect(
+                recognized_text
+            )
+        except WakeWordDetectionError:
+            wake_word_result = None
+
+        if (
+            wake_word_result is not None
+            and wake_word_result.detected
+            and wake_word_result.has_command
+        ):
+            recognized_text = wake_word_result.command
+
+        await self._process_input(
+            recognized_text
+        )
 
     async def _listen(self) -> str:
-        assistant_name = self._container.settings.assistant_name
+        if self._conversation_active:
+            status_message = (
+                f"{self._assistant_name}: Estou ouvindo por "
+                f"{self._recording_duration_seconds:.0f} segundos..."
+            )
+        else:
+            status_message = (
+                f"{self._assistant_name}: Aguardando a palavra "
+                "de ativação..."
+            )
 
-        print(
-            f"\n{assistant_name}: Estou ouvindo por "
-            f"{self._recording_duration_seconds:.0f} segundos..."
-        )
+        print(f"\n{status_message}")
 
         try:
             audio = await self._audio_capture.record(
@@ -87,27 +199,35 @@ class VoiceCLI:
             )
         except AudioCaptureError as error:
             print(
-                f"\n{assistant_name}: Não consegui acessar o microfone. "
-                f"{error}"
+                f"\n{self._assistant_name}: "
+                f"Não consegui acessar o microfone. {error}"
             )
+
             await asyncio.sleep(1)
             return ""
 
-        print(f"{assistant_name}: Processando sua fala...")
+        print(
+            f"{self._assistant_name}: "
+            "Processando sua fala..."
+        )
 
         try:
-            result = await self._speech_recognizer.recognize(audio)
+            result = await self._speech_recognizer.recognize(
+                audio
+            )
         except SpeechRecognitionError as error:
             print(
-                f"\n{assistant_name}: Não consegui reconhecer sua fala. "
-                f"{error}"
+                f"\n{self._assistant_name}: "
+                f"Não consegui reconhecer sua fala. {error}"
             )
+
             await asyncio.sleep(1)
             return ""
 
         if not result.recognized:
             print(
-                f"\n{assistant_name}: Não consegui entender o que foi dito."
+                f"\n{self._assistant_name}: "
+                "Nenhuma fala foi reconhecida."
             )
             return ""
 
@@ -117,17 +237,36 @@ class VoiceCLI:
         self,
         user_text: str,
     ) -> None:
+        cleaned_text = user_text.strip()
+
+        if not cleaned_text:
+            return
+
+        normalized_text = self._normalize_command(
+            cleaned_text
+        )
+
+        if self._is_sleep_command(normalized_text):
+            self._conversation_active = False
+
+            await self._respond(
+                "Certo. Voltando ao modo de espera."
+            )
+            return
+
         permission_result = self._container.permissions.check(
-            user_text
+            cleaned_text
         )
 
         if permission_result is not None:
-            await self._respond(permission_result.message)
+            await self._respond(
+                permission_result.message
+            )
             return
 
         try:
             response = await self._container.assistant.process(
-                user_text
+                cleaned_text
             )
         except Exception as error:
             await self._respond(
@@ -138,21 +277,20 @@ class VoiceCLI:
 
         try:
             self._container.repository.save_interaction(
-                user_text=user_text,
+                user_text=cleaned_text,
                 assistant_text=response.text,
                 source=response.source,
             )
         except Exception as error:
-            assistant_name = (
-                self._container.settings.assistant_name
-            )
-
             print(
-                f"\n{assistant_name}: Não foi possível salvar "
-                f"o histórico. Erro: {error}"
+                f"\n{self._assistant_name}: "
+                "Não foi possível salvar o histórico. "
+                f"Erro: {error}"
             )
 
-        await self._respond(response.text)
+        await self._respond(
+            response.text
+        )
 
     async def _respond(
         self,
@@ -163,38 +301,38 @@ class VoiceCLI:
         if not cleaned_text:
             return
 
-        assistant_name = self._container.settings.assistant_name
-
-        print(f"\n{assistant_name}: {cleaned_text}\n")
+        print(
+            f"\n{self._assistant_name}: "
+            f"{cleaned_text}\n"
+        )
 
         try:
-            await self._speech_synthesizer.speak(cleaned_text)
+            await self._speech_synthesizer.speak(
+                cleaned_text
+            )
         except SpeechSynthesisError as error:
             print(
-                f"{assistant_name}: Não consegui reproduzir "
-                f"a resposta por voz. {error}"
+                f"{self._assistant_name}: "
+                "Não consegui reproduzir a resposta por voz. "
+                f"{error}"
             )
 
-    def _is_exit_command(
-        self,
-        user_text: str,
-    ) -> bool:
-        normalized_text = user_text.casefold().strip()
-
-        return normalized_text in EXIT_COMMANDS
-
     async def _show_startup_message(self) -> None:
-        assistant_name = self._container.settings.assistant_name
-
         startup_message = (
-            f"{assistant_name} Online. Em que posso te ajudar?"
+            f"{self._assistant_name} Online. "
+            "Em que posso te ajudar?"
         )
 
         print()
         print(startup_message)
         print(
-            "Fale 'sair', 'encerrar' ou 'desligar' "
-            "para finalizar."
+            "Diga 'Zyron' para ativar o modo de conversa."
+        )
+        print(
+            "Diga 'pare de ouvir' para voltar ao modo de espera."
+        )
+        print(
+            "Diga 'desligar Zyron' para encerrar o sistema."
         )
 
         try:
@@ -203,16 +341,19 @@ class VoiceCLI:
             )
         except SpeechSynthesisError as error:
             print(
-                f"\n{assistant_name}: Não consegui reproduzir "
-                f"a mensagem inicial. {error}"
+                f"\n{self._assistant_name}: "
+                "Não consegui reproduzir a mensagem inicial. "
+                f"{error}"
             )
 
     async def _show_shutdown_message(self) -> None:
-        assistant_name = self._container.settings.assistant_name
         shutdown_message = "Sistema encerrado."
 
         print()
-        print(f"{assistant_name}: {shutdown_message}")
+        print(
+            f"{self._assistant_name}: "
+            f"{shutdown_message}"
+        )
 
         try:
             await self._speech_synthesizer.speak(
@@ -221,12 +362,37 @@ class VoiceCLI:
         except SpeechSynthesisError:
             pass
 
+    def _is_exit_command(
+        self,
+        normalized_text: str,
+    ) -> bool:
+        return normalized_text in EXIT_COMMANDS
+
+    def _is_sleep_command(
+        self,
+        normalized_text: str,
+    ) -> bool:
+        return normalized_text in SLEEP_COMMANDS
+
+    def _normalize_command(
+        self,
+        text: str,
+    ) -> str:
+        return " ".join(
+            text.casefold().strip().split()
+        )
+
+    @property
+    def _assistant_name(self) -> str:
+        return self._container.settings.assistant_name
+
 
 async def run_voice_cli(
     container: ApplicationContainer | None = None,
     audio_capture: AudioCapture | None = None,
     speech_recognizer: SpeechRecognizer | None = None,
     speech_synthesizer: SpeechSynthesizer | None = None,
+    wake_word_detector: WakeWordDetector | None = None,
 ) -> None:
     resolved_container = container or build_container()
 
@@ -254,11 +420,23 @@ async def run_voice_cli(
         )
     )
 
+    resolved_wake_word_detector = (
+        wake_word_detector
+        or WakeWordDetector(
+            wake_words=(
+                "zyron",
+                "ziron",
+                "sairon",
+            )
+        )
+    )
+
     cli = VoiceCLI(
         container=resolved_container,
         audio_capture=resolved_audio_capture,
         speech_recognizer=resolved_speech_recognizer,
         speech_synthesizer=resolved_speech_synthesizer,
+        wake_word_detector=resolved_wake_word_detector,
         recording_duration_seconds=5.0,
     )
 
@@ -278,12 +456,17 @@ async def run_voice_cli(
 
 def main() -> None:
     try:
-        asyncio.run(run_voice_cli())
+        asyncio.run(
+            run_voice_cli()
+        )
     except KeyboardInterrupt:
-        print("\nZYRON: Sistema encerrado.")
+        print(
+            "\nZYRON: Sistema encerrado."
+        )
     except Exception as error:
         raise SystemExit(
-            f"Não foi possível iniciar o modo de voz: {error}"
+            "Não foi possível iniciar o modo de voz: "
+            f"{error}"
         ) from error
 
 
