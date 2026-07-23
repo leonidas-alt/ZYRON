@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from threading import Lock
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from zyron.infrastructure.voice.exceptions import SpeechSynthesisError
@@ -10,198 +11,212 @@ from zyron.infrastructure.voice.exceptions import SpeechSynthesisError
 class SpeechSynthesizer:
     def __init__(
         self,
-        rate: int = 180,
-        volume: float = 1.0,
-        voice_name: str | None = None,
+        voice_name: str = "pt-BR-FranciscaNeural",
+        rate: int = 0,
+        volume: int = 100,
     ) -> None:
-        if rate <= 0:
+        if not voice_name.strip():
             raise ValueError(
-                "A velocidade da voz deve ser maior que zero."
+                "O nome da voz não pode estar vazio."
             )
 
-        if not 0.0 <= volume <= 1.0:
+        if rate < -100 or rate > 100:
             raise ValueError(
-                "O volume deve estar entre 0.0 e 1.0."
+                "A velocidade da voz deve estar entre -100 e 100."
             )
 
+        if volume < 0 or volume > 100:
+            raise ValueError(
+                "O volume da voz deve estar entre 0 e 100."
+            )
+
+        self._voice_name = voice_name.strip()
         self._rate = rate
         self._volume = volume
-        self._voice_name = voice_name
-        self._engine: Any | None = None
-        self._lock = Lock()
+
+    @property
+    def voice_name(self) -> str:
+        return self._voice_name
+
+    @property
+    def rate(self) -> int:
+        return self._rate
+
+    @property
+    def volume(self) -> int:
+        return self._volume
 
     async def speak(
         self,
         text: str,
     ) -> None:
-        cleaned_text = text.strip()
+        normalized_text = text.strip()
 
-        if not cleaned_text:
+        if not normalized_text:
             return
 
-        await asyncio.to_thread(
-            self._speak_sync,
-            cleaned_text,
+        audio_path = await self.synthesize(
+            normalized_text
         )
+
+        try:
+            await asyncio.to_thread(
+                self._play_audio,
+                audio_path,
+            )
+        finally:
+            audio_path.unlink(
+                missing_ok=True
+            )
+
+    async def synthesize(
+        self,
+        text: str,
+        output_path: str | Path | None = None,
+    ) -> Path:
+        normalized_text = text.strip()
+
+        if not normalized_text:
+            raise SpeechSynthesisError(
+                "O texto para síntese não pode estar vazio."
+            )
+
+        destination = self._resolve_output_path(
+            output_path
+        )
+
+        edge_tts = self._load_edge_tts()
+
+        try:
+            communicator = edge_tts.Communicate(
+                text=normalized_text,
+                voice=self._voice_name,
+                rate=self._format_rate(),
+                volume=self._format_volume(),
+            )
+
+            await communicator.save(
+                str(destination)
+            )
+
+        except Exception as error:
+            destination.unlink(
+                missing_ok=True
+            )
+
+            raise SpeechSynthesisError(
+                "Não foi possível gerar o áudio da fala."
+            ) from error
+
+        if not destination.exists():
+            raise SpeechSynthesisError(
+                "O arquivo de áudio não foi gerado."
+            )
+
+        return destination
 
     def speak_sync(
         self,
         text: str,
     ) -> None:
-        cleaned_text = text.strip()
-
-        if not cleaned_text:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(
+                self.speak(text)
+            )
             return
-
-        self._speak_sync(cleaned_text)
-
-    def stop(self) -> None:
-        if self._engine is None:
-            return
-
-        try:
-            self._engine.stop()
-        except Exception as error:
-            raise SpeechSynthesisError(
-                "Não foi possível interromper a reprodução de voz."
-            ) from error
-
-    def list_voices(self) -> list[str]:
-        engine = self._get_engine()
-
-        try:
-            voices = engine.getProperty("voices")
-        except Exception as error:
-            raise SpeechSynthesisError(
-                "Não foi possível consultar as vozes disponíveis."
-            ) from error
-
-        return [
-            self._get_voice_description(voice)
-            for voice in voices
-        ]
-
-    def _speak_sync(
-        self,
-        text: str,
-    ) -> None:
-        with self._lock:
-            engine = self._get_engine()
-
-            try:
-                engine.say(text)
-                engine.runAndWait()
-            except Exception as error:
-                raise SpeechSynthesisError(
-                    "Não foi possível reproduzir a resposta por voz."
-                ) from error
-
-    def _get_engine(self) -> Any:
-        if self._engine is not None:
-            return self._engine
-
-        try:
-            import pyttsx3
-
-            engine = pyttsx3.init()
-            engine.setProperty("rate", self._rate)
-            engine.setProperty("volume", self._volume)
-
-            if self._voice_name:
-                self._select_voice(
-                    engine=engine,
-                    voice_name=self._voice_name,
-                )
-
-            self._engine = engine
-            return engine
-        except ImportError as error:
-            raise SpeechSynthesisError(
-                "A biblioteca pyttsx3 não está instalada."
-            ) from error
-        except Exception as error:
-            raise SpeechSynthesisError(
-                "Não foi possível inicializar o sintetizador de voz."
-            ) from error
-
-    def _select_voice(
-        self,
-        engine: Any,
-        voice_name: str,
-    ) -> None:
-        normalized_name = voice_name.casefold()
-        voices = engine.getProperty("voices")
-
-        for voice in voices:
-            voice_data = self._get_voice_description(
-                voice
-            ).casefold()
-
-            if normalized_name in voice_data:
-                engine.setProperty(
-                    "voice",
-                    voice.id,
-                )
-                return
 
         raise SpeechSynthesisError(
-            f"A voz '{voice_name}' não foi encontrada."
+            "O método speak_sync não pode ser executado "
+            "dentro de um loop assíncrono ativo."
         )
 
-    def _get_voice_description(
+    def _play_audio(
         self,
-        voice: Any,
-    ) -> str:
-        voice_id = str(
-            getattr(
-                voice,
-                "id",
-                "",
+        audio_path: Path,
+    ) -> None:
+        pygame = self._load_pygame()
+
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+
+            pygame.mixer.music.load(
+                str(audio_path)
             )
-        ).strip()
 
-        voice_name = str(
-            getattr(
-                voice,
-                "name",
-                "",
-            )
-        ).strip()
+            pygame.mixer.music.play()
 
-        languages = getattr(
-            voice,
-            "languages",
-            [],
-        )
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(20)
 
-        language_text = ", ".join(
-            self._normalize_language(language)
-            for language in languages
-        )
+            pygame.mixer.music.unload()
 
-        values = [
-            value
-            for value in (
-                voice_name,
-                voice_id,
-                language_text,
-            )
-            if value
-        ]
+        except Exception as error:
+            raise SpeechSynthesisError(
+                "Não foi possível reproduzir o áudio da fala."
+            ) from error
 
-        return " | ".join(values)
-
-    def _normalize_language(
+    def _resolve_output_path(
         self,
-        language: object,
-    ) -> str:
-        if isinstance(
-            language,
-            bytes,
-        ):
-            return language.decode(
-                "utf-8",
-                errors="ignore",
-            ).strip()
+        output_path: str | Path | None,
+    ) -> Path:
+        if output_path is not None:
+            destination = Path(
+                output_path
+            ).expanduser()
 
-        return str(language).strip()
+            destination.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            return destination
+
+        temporary_file = tempfile.NamedTemporaryFile(
+            suffix=".mp3",
+            delete=False,
+        )
+
+        temporary_path = Path(
+            temporary_file.name
+        )
+
+        temporary_file.close()
+
+        return temporary_path
+
+    def _format_rate(self) -> str:
+        return f"{self._rate:+d}%"
+
+    def _format_volume(self) -> str:
+        volume_difference = self._volume - 100
+
+        return f"{volume_difference:+d}%"
+
+    def _load_edge_tts(
+        self,
+    ) -> Any:
+        try:
+            import edge_tts
+
+        except ImportError as error:
+            raise SpeechSynthesisError(
+                "A biblioteca edge-tts não está instalada."
+            ) from error
+
+        return edge_tts
+
+    def _load_pygame(
+        self,
+    ) -> Any:
+        try:
+            import pygame
+
+        except ImportError as error:
+            raise SpeechSynthesisError(
+                "A biblioteca pygame não está instalada."
+            ) from error
+
+        return pygame
