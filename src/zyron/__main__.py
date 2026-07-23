@@ -1,118 +1,44 @@
 from __future__ import annotations
 
-import argparse
 import asyncio
 import sys
-from collections.abc import Sequence
 
 from zyron.bootstrap.container import build_container
-from zyron.interfaces.text_cli import TextCLI
-from zyron.interfaces.voice_cli import VoiceCLI
+from zyron.domain.exceptions import ZyronError
+from zyron.infrastructure.voice.exceptions import VoiceError
+from zyron.interfaces.text_cli import run_text_cli
+from zyron.interfaces.voice_cli import run_voice_cli
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="zyron",
-        description="Assistente pessoal ZYRON.",
-    )
-
-    mode_group = parser.add_mutually_exclusive_group()
-
-    mode_group.add_argument(
-        "--text",
-        action="store_true",
-        help="Inicia o ZYRON no modo texto.",
-    )
-
-    mode_group.add_argument(
-        "--voice",
-        action="store_true",
-        help="Inicia o ZYRON no modo voz.",
-    )
-
-    return parser
-
-
-async def run_text_mode() -> None:
+async def run() -> None:
     container = build_container()
 
-    cli = TextCLI(
-        container=container,
-    )
+    mode = container.settings.mode.strip().casefold()
 
-    try:
-        await cli.run()
-    finally:
-        try:
-            container.plugin_registry.disable_all()
-        finally:
-            container.repository.close()
-
-
-async def run_voice_mode() -> None:
-    container = build_container()
-
-    if not container.settings.voice_enabled:
-        container.repository.close()
-
-        raise RuntimeError(
-            "O modo de voz está desativado nas configurações."
-        )
-
-    cli = VoiceCLI(
-        container=container,
-        audio_capture=container.audio_capture,
-        speech_recognizer=container.speech_recognizer,
-        speech_synthesizer=container.speech_synthesizer,
-        wake_word_detector=container.wake_word_detector,
-        recording_duration_seconds=(
-            container.settings.recording_duration_seconds
-        ),
-    )
-
-    try:
-        await cli.run()
-    finally:
-        try:
-            container.speech_synthesizer.stop()
-        except Exception:
-            pass
-
-        try:
-            container.plugin_registry.disable_all()
-        finally:
-            container.repository.close()
-
-
-async def run(
-    arguments: argparse.Namespace,
-) -> None:
-    if arguments.voice:
-        await run_voice_mode()
+    if mode == "voice":
+        await run_voice_cli(container)
         return
 
-    await run_text_mode()
+    if mode == "text":
+        await run_text_cli(container)
+        return
+
+    raise ValueError(
+        f"Modo de execução inválido: {container.settings.mode}"
+    )
 
 
-def main(
-    argv: Sequence[str] | None = None,
-) -> None:
-    parser = build_parser()
-    arguments = parser.parse_args(argv)
-
+def main() -> None:
     try:
-        asyncio.run(
-            run(arguments)
-        )
+        asyncio.run(run())
     except KeyboardInterrupt:
-        print("\nZYRON: Sistema encerrado.")
+        print("\nZYRON encerrado.")
+    except (VoiceError, ZyronError, ValueError) as error:
+        print(f"Erro ao iniciar o ZYRON: {error}")
+        sys.exit(1)
     except Exception as error:
-        print(
-            f"\nZYRON: Não foi possível iniciar o sistema: {error}",
-            file=sys.stderr,
-        )
-
-        raise SystemExit(1) from error
+        print(f"Erro inesperado ao iniciar o ZYRON: {error}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
