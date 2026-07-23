@@ -69,7 +69,7 @@ def build_container(
     plugin_registry = PluginRegistry()
 
     plugin_loader = PluginLoader(
-        plugin_registry,
+        registry=plugin_registry,
     )
 
     plugin_load_result = plugin_loader.load_plugins(
@@ -85,7 +85,12 @@ def build_container(
     )
 
     speech_recognizer = SpeechRecognizer(
-        model_path=resolved_settings.vosk_model_path,
+        model_name=resolved_settings.whisper_model,
+        device=resolved_settings.whisper_device,
+        compute_type=resolved_settings.whisper_compute_type,
+        language=resolved_settings.whisper_language,
+        beam_size=resolved_settings.whisper_beam_size,
+        vad_filter=resolved_settings.whisper_vad_filter,
     )
 
     speech_synthesizer = SpeechSynthesizer(
