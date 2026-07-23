@@ -92,18 +92,6 @@ src/zyron/
 | `plugins` | Reúne capacidades independentes, como abrir um aplicativo ou iniciar uma rotina |
 | `bootstrap` | Monta o sistema e injeta as dependências necessárias |
 
-## Tecnologias
-
-- **Python 3.11+** — linguagem principal;
-- **Ollama** — execução local do modelo de linguagem;
-- **python-dotenv** — carregamento das configurações;
-- **Requests** — comunicação HTTP com o Ollama;
-- **SQLite** — memória persistente planejada;
-- **Faster Whisper** — reconhecimento e transcrição de voz;
-- **SoundDevice, NumPy e SciPy** — captura e processamento de áudio;
-- **Edge TTS e Pygame** — geração e reprodução da voz;
-- **Pytest** — testes automatizados;
-- **Ruff** — análise e padronização do código.
 
 ## Pré-requisitos
 
@@ -238,19 +226,6 @@ exit
 quit
 ```
 
-## Segurança
-
-O ZYRON deverá seguir estas regras durante toda a sua evolução:
-
-- Confirmar ações antes de modificar o computador;
-- executar apenas aplicativos e comandos presentes em uma lista permitida;
-- nunca executar diretamente uma frase transcrita do usuário;
-- não acessar senhas ou dados bancários;
-- não realizar compras ou pagamentos;
-- não desativar mecanismos de segurança;
-- não excluir dados permanentemente;
-- informar quando uma ação não puder ser realizada.
-
 ## Objetivos de aprendizado
 
 Além de construir um assistente pessoal, o projeto será usado para praticar:
@@ -271,7 +246,3 @@ Além de construir um assistente pessoal, o projeto será usado para praticar:
 O ZYRON é um projeto pessoal e educacional, mas ideias, sugestões e relatos de problemas são bem-vindos.
 
 Utilize as [Issues do repositório](https://github.com/leonidas-alt/ZYRON/issues) para contribuir com a evolução do projeto.
-
----
-
-Se o ZYRON conseguir **ouvir, entender, lembrar, confirmar e executar**, ele deixa de ser apenas um chatbot e passa a funcionar como um assistente pessoal de verdade.
