@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from zyron.application.assistant import ZyronAssistant
 from zyron.application.confirmations import ConfirmationService
 from zyron.application.context.conversation import ConversationContext
-from zyron.application.permissions.permission_service import PermissionService
+from zyron.application.permissions.service import PermissionService
 from zyron.config.settings import Settings
 from zyron.infrastructure.ai.ollama_client import OllamaClient
 from zyron.infrastructure.persistence.sqlite_repository import SQLiteRepository
