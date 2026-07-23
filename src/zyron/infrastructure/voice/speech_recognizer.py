@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
+import math
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from zyron.infrastructure.voice.audio_capture import CapturedAudio
@@ -14,6 +13,8 @@ from zyron.infrastructure.voice.exceptions import SpeechRecognitionError
 class SpeechRecognitionResult:
     text: str
     confidence: float | None = None
+    language: str | None = None
+    language_probability: float | None = None
 
     @property
     def recognized(self) -> bool:
@@ -23,14 +24,52 @@ class SpeechRecognitionResult:
 class SpeechRecognizer:
     def __init__(
         self,
-        model_path: str | Path,
+        model_name: str = "small",
+        device: str = "cpu",
+        compute_type: str = "int8",
+        language: str | None = "pt",
+        beam_size: int = 5,
+        vad_filter: bool = True,
     ) -> None:
-        self._model_path = Path(model_path)
+        if not model_name.strip():
+            raise ValueError(
+                "O nome do modelo Whisper não pode estar vazio."
+            )
+
+        if not device.strip():
+            raise ValueError(
+                "O dispositivo do Whisper não pode estar vazio."
+            )
+
+        if not compute_type.strip():
+            raise ValueError(
+                "O compute type do Whisper não pode estar vazio."
+            )
+
+        if beam_size <= 0:
+            raise ValueError(
+                "O beam size deve ser maior que zero."
+            )
+
+        self._model_name = model_name.strip()
+        self._device = device.strip()
+        self._compute_type = compute_type.strip()
+        self._language = language.strip() if language else None
+        self._beam_size = beam_size
+        self._vad_filter = vad_filter
         self._model: Any | None = None
 
     @property
-    def model_path(self) -> Path:
-        return self._model_path
+    def model_name(self) -> str:
+        return self._model_name
+
+    @property
+    def device(self) -> str:
+        return self._device
+
+    @property
+    def compute_type(self) -> str:
+        return self._compute_type
 
     async def recognize(
         self,
@@ -47,104 +86,148 @@ class SpeechRecognizer:
     ) -> SpeechRecognitionResult:
         self._validate_audio(audio)
 
+        audio_array = self._convert_audio_to_float32(audio)
         model = self._get_model()
-        recognizer_class = self._load_recognizer_class()
 
         try:
-            recognizer = recognizer_class(
-                model,
-                float(audio.sample_rate),
+            segments_generator, info = model.transcribe(
+                audio_array,
+                language=self._language,
+                beam_size=self._beam_size,
+                vad_filter=self._vad_filter,
+                condition_on_previous_text=False,
             )
 
-            recognizer.SetWords(True)
-            recognizer.AcceptWaveform(audio.data)
+            segments = list(segments_generator)
 
-            raw_result = recognizer.FinalResult()
         except Exception as error:
             raise SpeechRecognitionError(
-                "Não foi possível reconhecer o áudio capturado."
+                "Não foi possível reconhecer o áudio "
+                "utilizando o Faster Whisper."
             ) from error
 
-        return self._parse_result(raw_result)
+        return SpeechRecognitionResult(
+            text=self._combine_segments(segments),
+            confidence=self._calculate_confidence(segments),
+            language=getattr(
+                info,
+                "language",
+                self._language,
+            ),
+            language_probability=self._safe_float(
+                getattr(
+                    info,
+                    "language_probability",
+                    None,
+                )
+            ),
+        )
 
     def _get_model(self) -> Any:
         if self._model is not None:
             return self._model
 
-        if not self._model_path.exists():
-            raise SpeechRecognitionError(
-                f"O modelo de reconhecimento não foi encontrado: "
-                f"{self._model_path}"
-            )
-
-        if not self._model_path.is_dir():
-            raise SpeechRecognitionError(
-                "O caminho do modelo de reconhecimento deve ser uma pasta."
-            )
-
-        model_class = self._load_model_class()
+        whisper_model_class = self._load_whisper_model_class()
 
         try:
-            self._model = model_class(
-                str(self._model_path)
+            self._model = whisper_model_class(
+                self._model_name,
+                device=self._device,
+                compute_type=self._compute_type,
             )
+
         except Exception as error:
             raise SpeechRecognitionError(
-                "Não foi possível carregar o modelo de reconhecimento."
+                "Não foi possível carregar o modelo Faster Whisper."
             ) from error
 
         return self._model
 
-    def _parse_result(
+    def _convert_audio_to_float32(
         self,
-        raw_result: str,
-    ) -> SpeechRecognitionResult:
+        audio: CapturedAudio,
+    ) -> Any:
         try:
-            result = json.loads(raw_result)
-        except json.JSONDecodeError as error:
+            import numpy as np
+
+        except ImportError as error:
             raise SpeechRecognitionError(
-                "O reconhecedor retornou uma resposta inválida."
+                "A biblioteca numpy não está instalada."
             ) from error
 
-        text = str(
-            result.get("text", "")
-        ).strip()
+        try:
+            samples = np.frombuffer(
+                audio.data,
+                dtype=np.int16,
+            )
 
-        confidence = self._calculate_confidence(
-            result.get("result")
-        )
+            return samples.astype(np.float32) / 32768.0
 
-        return SpeechRecognitionResult(
-            text=text,
-            confidence=confidence,
-        )
+        except Exception as error:
+            raise SpeechRecognitionError(
+                "Não foi possível converter o áudio."
+            ) from error
+
+    def _combine_segments(
+        self,
+        segments: list[Any],
+    ) -> str:
+        text_parts: list[str] = []
+
+        for segment in segments:
+            text = str(
+                getattr(
+                    segment,
+                    "text",
+                    "",
+                )
+            ).strip()
+
+            if text:
+                text_parts.append(text)
+
+        return " ".join(text_parts).strip()
 
     def _calculate_confidence(
         self,
-        words: object,
+        segments: list[Any],
     ) -> float | None:
-        if not isinstance(words, list):
-            return None
+        probabilities: list[float] = []
 
-        confidence_values: list[float] = []
+        for segment in segments:
+            average_log_probability = self._safe_float(
+                getattr(
+                    segment,
+                    "avg_logprob",
+                    None,
+                )
+            )
 
-        for word in words:
-            if not isinstance(word, dict):
+            if average_log_probability is None:
                 continue
 
-            confidence = word.get("conf")
-
-            if isinstance(confidence, int | float):
-                confidence_values.append(
-                    float(confidence)
+            try:
+                probability = math.exp(
+                    average_log_probability
                 )
 
-        if not confidence_values:
+                probabilities.append(
+                    max(
+                        0.0,
+                        min(
+                            probability,
+                            1.0,
+                        ),
+                    )
+                )
+
+            except (OverflowError, ValueError):
+                continue
+
+        if not probabilities:
             return None
 
-        return sum(confidence_values) / len(
-            confidence_values
-        )
+        return sum(probabilities) / len(probabilities)
 
     def _validate_audio(
         self,
@@ -152,40 +235,40 @@ class SpeechRecognizer:
     ) -> None:
         if not audio.data:
             raise SpeechRecognitionError(
-                "Nenhum áudio foi fornecido para reconhecimento."
+                "Nenhum áudio foi fornecido."
             )
 
-        if audio.sample_rate <= 0:
+        if audio.sample_rate != 16_000:
             raise SpeechRecognitionError(
-                "A taxa de amostragem do áudio é inválida."
+                "O áudio precisa estar em 16 kHz."
             )
 
         if audio.channels != 1:
             raise SpeechRecognitionError(
-                "O reconhecimento exige áudio em canal mono."
+                "O áudio precisa estar em canal mono."
             )
 
         if audio.sample_width != 2:
             raise SpeechRecognitionError(
-                "O reconhecimento exige áudio PCM de 16 bits."
+                "O áudio precisa estar em PCM de 16 bits."
             )
 
-    def _load_model_class(self) -> Any:
+    def _load_whisper_model_class(self) -> Any:
         try:
-            from vosk import Model
+            from faster_whisper import WhisperModel
+
         except ImportError as error:
             raise SpeechRecognitionError(
-                "A biblioteca vosk não está instalada."
+                "A biblioteca faster-whisper não está instalada."
             ) from error
 
-        return Model
+        return WhisperModel
 
-    def _load_recognizer_class(self) -> Any:
-        try:
-            from vosk import KaldiRecognizer
-        except ImportError as error:
-            raise SpeechRecognitionError(
-                "A biblioteca vosk não está instalada."
-            ) from error
+    @staticmethod
+    def _safe_float(
+        value: object,
+    ) -> float | None:
+        if isinstance(value, (int, float)):
+            return float(value)
 
-        return KaldiRecognizer
+        return None
