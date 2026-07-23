@@ -5,7 +5,7 @@ class VoiceError(Exception):
     pass
 
 
-class SpeechSynthesisError(VoiceError):
+class AudioCaptureError(VoiceError):
     pass
 
 
@@ -13,7 +13,7 @@ class SpeechRecognitionError(VoiceError):
     pass
 
 
-class AudioCaptureError(VoiceError):
+class SpeechSynthesisError(VoiceError):
     pass
 
 
