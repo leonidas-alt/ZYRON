@@ -1,2 +1,0 @@
-[console_scripts]
-zyron = zyron.__main__:main

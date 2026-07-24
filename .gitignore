@@ -1,39 +1,52 @@
-# Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
+
+*.egg
 *.egg-info/
+.eggs/
+
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
+.coverage.*
 htmlcov/
 
-# Ambientes virtuais
 .venv/
 venv/
 env/
+ENV/
 
-# Variáveis e credenciais
 .env
+.env.local
+.env.*.local
+
 *.pem
 credentials.json
 token.json
 
-# Dados locais
 data/*
 !data/.gitkeep
 
-# Logs
 logs/*
 !logs/.gitkeep
 
-# Sistema e editores
 .vscode/
 .idea/
+
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Áudio temporário
+*.log
+*.tmp
+*.temp
+
 *.mp3
 *.wav
+
+dist/
+build/
