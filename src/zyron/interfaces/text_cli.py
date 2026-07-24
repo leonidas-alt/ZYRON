@@ -21,18 +21,14 @@ async def run_text_cli(
     app = container or build_container()
     name = app.settings.assistant_name
 
-    startup_message = (
-        f"{name} Online. Em que posso te ajudar?"
-    )
-
-    print(f"\n{name} > {startup_message}")
+    print(f"\n{name} Online. Em que posso te ajudar?")
     print("Digite 'sair' para encerrar.\n")
 
     while True:
         try:
             user_input = await asyncio.to_thread(
                 input,
-                "Você > ",
+                "> ",
             )
 
             command = user_input.strip()
@@ -41,25 +37,25 @@ async def run_text_cli(
                 continue
 
             if command.casefold() in EXIT_COMMANDS:
-                print(f"\n{name} > Encerrando. Até logo.")
+                print("\nEncerrando. Até logo.")
                 break
 
             response = await app.assistant.process(
                 command
             )
 
-            print(f"{name} > {response.text}\n")
+            print(f"{response.text}\n")
 
         except (EOFError, KeyboardInterrupt):
-            print(f"\n{name} > Encerrando. Até logo.")
+            print("\nEncerrando. Até logo.")
             break
 
         except ZyronError as error:
-            print(f"{name} > {error}\n")
+            print(f"{error}\n")
 
         except Exception as error:
             print(
-                f"{name} > Erro inesperado: {error}\n"
+                f"Erro inesperado: {error}\n"
             )
 
 

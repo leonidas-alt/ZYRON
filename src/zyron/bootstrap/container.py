@@ -3,11 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from zyron.application.assistant import ZyronAssistant
+from zyron.application.commands.command_router import CommandRouter
+from zyron.application.commands.handlers.application_handler import (
+    ApplicationHandler,
+)
+from zyron.application.commands.handlers.date_time_handler import (
+    DateTimeHandler,
+)
 from zyron.application.confirmations import ConfirmationService
 from zyron.application.context.conversation import ConversationContext
 from zyron.application.permissions.service import PermissionService
 from zyron.config.settings import Settings
 from zyron.infrastructure.ai.ollama_client import OllamaClient
+from zyron.infrastructure.automation.application_launcher import (
+    ApplicationLauncher,
+)
 from zyron.infrastructure.persistence.sqlite_repository import SQLiteRepository
 from zyron.infrastructure.voice.audio_capture import AudioCapture
 from zyron.infrastructure.voice.speech_recognizer import SpeechRecognizer
@@ -31,6 +41,8 @@ class ApplicationContainer:
     speech_recognizer: SpeechRecognizer
     speech_synthesizer: SpeechSynthesizer
     wake_word_detector: WakeWordDetector
+    command_router: CommandRouter
+    application_launcher: ApplicationLauncher
 
 
 def build_container(
@@ -53,11 +65,27 @@ def build_container(
         timeout_seconds=resolved_settings.ollama_timeout_seconds,
     )
 
+    date_time_handler = DateTimeHandler()
+
+    application_launcher = ApplicationLauncher()
+
+    application_handler = ApplicationHandler(
+        application_launcher=application_launcher,
+    )
+
+    command_router = CommandRouter(
+        handlers=[
+            date_time_handler,
+            application_handler,
+        ],
+    )
+
     assistant = ZyronAssistant(
         ai_client=ai_client,
         assistant_name=resolved_settings.assistant_name,
         owner_name=resolved_settings.owner_name,
         conversation_context=conversation_context,
+        command_router=command_router,
     )
 
     permissions = PermissionService()
@@ -116,4 +144,6 @@ def build_container(
         speech_recognizer=speech_recognizer,
         speech_synthesizer=speech_synthesizer,
         wake_word_detector=wake_word_detector,
+        command_router=command_router,
+        application_launcher=application_launcher,
     )

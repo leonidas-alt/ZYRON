@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/zyron/__init__.py
 src/zyron/__main__.py
