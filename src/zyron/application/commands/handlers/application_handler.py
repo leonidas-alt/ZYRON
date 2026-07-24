@@ -21,6 +21,7 @@ class ApplicationHandler:
         command: str,
     ) -> CommandResult:
         normalized_command = self._normalize(command)
+
         application_name = self._extract_application_name(
             normalized_command
         )
@@ -28,8 +29,19 @@ class ApplicationHandler:
         if application_name is None:
             return CommandResult.not_handled()
 
-        launch_result = self._application_launcher.launch(
+        application_name = self._remove_articles(
             application_name
+        )
+
+        resolved_application = self._resolve_application(
+            application_name
+        )
+
+        if resolved_application is None:
+            return CommandResult.not_handled()
+
+        launch_result = self._application_launcher.launch(
+            resolved_application
         )
 
         if launch_result.success:
@@ -52,24 +64,85 @@ class ApplicationHandler:
         command: str,
     ) -> str | None:
         patterns = (
-            r"^abrir\s+(.+)$",
-            r"^abra\s+(.+)$",
-            r"^iniciar\s+(.+)$",
-            r"^inicie\s+(.+)$",
-            r"^executar\s+(.+)$",
-            r"^execute\s+(.+)$",
+            r"^(?:por favor\s+)?abrir\s+(.+)$",
+            r"^(?:por favor\s+)?abra\s+(.+)$",
+            r"^(?:por favor\s+)?iniciar\s+(.+)$",
+            r"^(?:por favor\s+)?inicie\s+(.+)$",
+            r"^(?:por favor\s+)?executar\s+(.+)$",
+            r"^(?:por favor\s+)?execute\s+(.+)$",
         )
 
         for pattern in patterns:
-            match = re.match(pattern, command)
+            match = re.match(
+                pattern,
+                command,
+            )
 
-            if match is not None:
-                application_name = match.group(1).strip()
+            if match is None:
+                continue
 
-                if application_name:
-                    return application_name
+            application_name = match.group(1).strip()
+
+            if application_name:
+                return application_name
 
         return None
+
+    def _remove_articles(
+        self,
+        application_name: str,
+    ) -> str:
+        return re.sub(
+            r"^(?:o|a|os|as|um|uma)\s+",
+            "",
+            application_name,
+        ).strip()
+
+    def _resolve_application(
+        self,
+        application_name: str,
+    ) -> str | None:
+        aliases = {
+            "visual studio code": "vscode",
+            "vs code": "vscode",
+            "vscode": "vscode",
+            "code": "vscode",
+            "discord": "discord",
+            "spotify": "spotify",
+            "opera": "opera",
+            "opera gx": "opera",
+            "google chrome": "chrome",
+            "chrome": "chrome",
+            "microsoft edge": "edge",
+            "edge": "edge",
+            "explorador de arquivos": "explorer",
+            "explorador": "explorer",
+            "explorer": "explorer",
+            "gerenciador de arquivos": "explorer",
+            "terminal": "terminal",
+            "prompt de comando": "terminal",
+            "cmd": "terminal",
+            "calculadora": "calculator",
+            "calculator": "calculator",
+            "bloco de notas": "notepad",
+            "notepad": "notepad",
+        }
+
+        resolved_application = aliases.get(
+            application_name
+        )
+
+        if resolved_application is None:
+            return None
+
+        available_applications = set(
+            self._application_launcher.available_applications()
+        )
+
+        if resolved_application not in available_applications:
+            return None
+
+        return resolved_application
 
     def _normalize(
         self,

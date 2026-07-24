@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import math
+import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
@@ -94,11 +96,32 @@ class SpeechRecognizer:
                 audio_array,
                 language=self._language,
                 beam_size=self._beam_size,
+                best_of=self._beam_size,
                 vad_filter=self._vad_filter,
+                vad_parameters={
+                    "threshold": 0.5,
+                    "min_speech_duration_ms": 250,
+                    "max_speech_duration_s": 15,
+                    "min_silence_duration_ms": 500,
+                    "speech_pad_ms": 200,
+                },
+                temperature=0.0,
+                initial_prompt=(
+                    "Transcrição em português brasileiro. "
+                    "O nome do assistente pessoal é Zyron."
+                ),
                 condition_on_previous_text=False,
+                no_speech_threshold=0.6,
+                log_prob_threshold=-1.0,
+                compression_ratio_threshold=2.4,
+                repetition_penalty=1.1,
             )
 
-            segments = list(segments_generator)
+            segments = [
+                segment
+                for segment in segments_generator
+                if self._is_valid_segment(segment)
+            ]
 
         except Exception as error:
             raise SpeechRecognitionError(
@@ -106,8 +129,11 @@ class SpeechRecognizer:
                 "utilizando o Faster Whisper."
             ) from error
 
+        text = self._combine_segments(segments)
+        cleaned_text = self._clean_transcription(text)
+
         return SpeechRecognitionResult(
-            text=self._combine_segments(segments),
+            text=cleaned_text,
             confidence=self._calculate_confidence(segments),
             language=getattr(
                 info,
@@ -159,14 +185,100 @@ class SpeechRecognizer:
             samples = np.frombuffer(
                 audio.data,
                 dtype=np.int16,
+            ).astype(np.float32)
+
+            if samples.size == 0:
+                raise SpeechRecognitionError(
+                    "O áudio capturado está vazio."
+                )
+
+            samples -= float(np.mean(samples))
+
+            peak = float(np.max(np.abs(samples)))
+
+            if peak < 150:
+                return np.zeros_like(
+                    samples,
+                    dtype=np.float32,
+                )
+
+            samples /= 32768.0
+
+            normalized_peak = float(
+                np.max(
+                    np.abs(samples)
+                )
             )
 
-            return samples.astype(np.float32) / 32768.0
+            if normalized_peak > 0:
+                target_peak = 0.85
+                gain = min(
+                    target_peak / normalized_peak,
+                    3.0,
+                )
+
+                samples *= gain
+
+            samples = np.clip(
+                samples,
+                -1.0,
+                1.0,
+            )
+
+            return samples.astype(np.float32)
+
+        except SpeechRecognitionError:
+            raise
 
         except Exception as error:
             raise SpeechRecognitionError(
                 "Não foi possível converter o áudio."
             ) from error
+
+    def _is_valid_segment(
+        self,
+        segment: Any,
+    ) -> bool:
+        text = str(
+            getattr(
+                segment,
+                "text",
+                "",
+            )
+        ).strip()
+
+        if not text:
+            return False
+
+        no_speech_probability = self._safe_float(
+            getattr(
+                segment,
+                "no_speech_prob",
+                None,
+            )
+        )
+
+        if (
+            no_speech_probability is not None
+            and no_speech_probability >= 0.75
+        ):
+            return False
+
+        average_log_probability = self._safe_float(
+            getattr(
+                segment,
+                "avg_logprob",
+                None,
+            )
+        )
+
+        if (
+            average_log_probability is not None
+            and average_log_probability < -1.2
+        ):
+            return False
+
+        return True
 
     def _combine_segments(
         self,
@@ -187,6 +299,60 @@ class SpeechRecognizer:
                 text_parts.append(text)
 
         return " ".join(text_parts).strip()
+
+    def _clean_transcription(
+        self,
+        text: str,
+    ) -> str:
+        cleaned_text = "".join(
+            character
+            for character in text
+            if character.isprintable()
+        )
+
+        cleaned_text = re.sub(
+            r"\s+",
+            " ",
+            cleaned_text,
+        ).strip()
+
+        if not cleaned_text:
+            return ""
+
+        normalized_text = unicodedata.normalize(
+            "NFD",
+            cleaned_text.casefold(),
+        )
+
+        normalized_text = "".join(
+            character
+            for character in normalized_text
+            if unicodedata.category(character) != "Mn"
+        )
+
+        ignored_phrases = {
+            "obrigado por assistir",
+            "legendas pela comunidade",
+            "musica",
+            "silencio",
+        }
+
+        normalized_text = re.sub(
+            r"[^a-z0-9\s]",
+            " ",
+            normalized_text,
+        )
+
+        normalized_text = re.sub(
+            r"\s+",
+            " ",
+            normalized_text,
+        ).strip()
+
+        if normalized_text in ignored_phrases:
+            return ""
+
+        return cleaned_text
 
     def _calculate_confidence(
         self,

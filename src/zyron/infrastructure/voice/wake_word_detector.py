@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from collections.abc import Iterable
 
 from zyron.infrastructure.voice.exceptions import WakeWordDetectionError
@@ -11,7 +13,7 @@ class WakeWordDetector:
         wake_words: Iterable[str],
     ) -> None:
         normalized_words = tuple(
-            word.strip().casefold()
+            self._normalize(word)
             for word in wake_words
             if word.strip()
         )
@@ -22,6 +24,16 @@ class WakeWordDetector:
             )
 
         self._wake_words = normalized_words
+        self._wake_word_aliases = {
+            "zyron",
+            "ziron",
+            "siron",
+            "ciron",
+            "diron",
+            "dirao",
+            "zirao",
+            "sirion",
+        }
 
     @property
     def wake_words(self) -> tuple[str, ...]:
@@ -36,14 +48,17 @@ class WakeWordDetector:
                 "O texto informado é inválido."
             )
 
-        normalized_text = text.strip().casefold()
+        normalized_text = self._normalize(text)
 
         if not normalized_text:
             return False
 
+        words = normalized_text.split()
+
         return any(
-            wake_word in normalized_text
-            for wake_word in self._wake_words
+            word in self._wake_word_aliases
+            or word in self._wake_words
+            for word in words
         )
 
     def extract_command(
@@ -55,24 +70,21 @@ class WakeWordDetector:
                 "O texto informado é inválido."
             )
 
-        normalized_text = text.strip()
+        normalized_text = self._normalize(text)
 
         if not normalized_text:
             return ""
 
-        lowered_text = normalized_text.casefold()
+        words = normalized_text.split()
 
-        for wake_word in self._wake_words:
-            index = lowered_text.find(wake_word)
-
-            if index == -1:
-                continue
-
-            command = normalized_text[
-                index + len(wake_word):
-            ].strip(" ,.:;!?")
-
-            return command
+        for index, word in enumerate(words):
+            if (
+                word in self._wake_word_aliases
+                or word in self._wake_words
+            ):
+                return " ".join(
+                    words[index + 1:]
+                ).strip()
 
         return ""
 
@@ -86,3 +98,40 @@ class WakeWordDetector:
             )
 
         return self.extract_command(text)
+
+    def _normalize(
+        self,
+        text: str,
+    ) -> str:
+        cleaned_text = "".join(
+            character
+            for character in text
+            if character.isprintable()
+        )
+
+        cleaned_text = unicodedata.normalize(
+            "NFD",
+            cleaned_text,
+        )
+
+        cleaned_text = "".join(
+            character
+            for character in cleaned_text
+            if unicodedata.category(character) != "Mn"
+        )
+
+        cleaned_text = cleaned_text.casefold()
+
+        cleaned_text = re.sub(
+            r"[^a-z0-9\s]",
+            " ",
+            cleaned_text,
+        )
+
+        cleaned_text = re.sub(
+            r"\s+",
+            " ",
+            cleaned_text,
+        )
+
+        return cleaned_text.strip()
